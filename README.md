@@ -1,4 +1,4 @@
-# Build an Interactive Question Answering App with pgvector on Aurora PostgreSQL
+# Unlocking the Power of AI for Question Answering: A Deep Dive into pgvector and Amazon Aurora PostgreSQL
 
 This repository guides users through building an enhanced similarity search solution using Amazon SageMaker and Amazon Aurora PostgreSQL-compatible edition using the extension `pgvector`.
 
