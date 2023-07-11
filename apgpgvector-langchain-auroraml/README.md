@@ -17,7 +17,7 @@ Please follow these steps:
    pip install -r requirements.txt
    ```
 
-4. Create a `.env` file in your project directory similar to `.env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB environment variables. If you don't have one, create a new access token - [HuggingFace](https://huggingface.co/settings/tokens).
+4. Create a `.env` file in your project directory similar to `env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB environment variables. If you don't have one, create a new access token - [HuggingFace](https://huggingface.co/settings/tokens).
 
 5. Make sure you have Jupyter notebook installed. For this demo, I have used the [Jupyter notebook](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) extension in VS code (highly recommended for local testing). 
 
