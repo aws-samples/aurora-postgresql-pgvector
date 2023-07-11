@@ -1,4 +1,4 @@
-# Unlocking the Power of AI for Question Answering: A Deep Dive into pgvector and Amazon Aurora PostgreSQL
+# Unleashing the Power of Generative AI: Harnessing pgvector and Amazon Aurora PostgreSQL for NLP, Chatbots and Sentiment Analysis
 
 This repository guides users through building an enhanced similarity search solution using Amazon SageMaker and Amazon Aurora PostgreSQL-compatible edition using the extension `pgvector`.
 
