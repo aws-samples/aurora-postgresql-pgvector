@@ -41,4 +41,4 @@ This repository is intended for educational purposes and does not accept further
 
 ## License
 -------
-The GenAI Q&A with pgvector and Amazon Aurora PostgreSQL App is released under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html).
+The pgvector and Aurora Machine Learning for Sentiment Analysis demo is released under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html).
