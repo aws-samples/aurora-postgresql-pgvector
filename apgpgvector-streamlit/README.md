@@ -32,7 +32,7 @@ To install the GenAI Q&A with pgvector and Amazon Aurora PostgreSQL App, please 
    pip install -r requirements.txt
    ```
 
-3. Create a `.env` file in your project directory similar to `.env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB environment variables. If you don't have one, create a new access token - [HuggingFace](https://huggingface.co/settings/tokens).
+3. Create a `.env` file in your project directory similar to `env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB environment variables. If you don't have one, create a new access token - [HuggingFace](https://huggingface.co/settings/tokens).
 
 ## Usage
 -----
