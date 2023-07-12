@@ -37,7 +37,7 @@ bot_template = '''
 user_template = '''
 <div class="chat-message user">
     <div class="avatar">
-        <img src="https://i.ibb.co/6gJ9hdK/hyperbade-noborder.png">
+        <img src="https://i.ibb.co/wRtZstJ/Aurora.png">
     </div>    
     <div class="message">{{MSG}}</div>
 </div>
