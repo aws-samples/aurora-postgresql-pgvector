@@ -1,4 +1,3 @@
-# aurora-postgresql-pgvector
 ## Leveraging pgvector and Amazon Aurora PostgreSQL for Natural Language Processing, Chatbots and Sentiment Analysis
 
 This repository is associated with the AWS blog post: Leveraging pgvector and Amazon Aurora PostgreSQL for Natural Language Processing, Chatbots and Sentiment Analysis.
