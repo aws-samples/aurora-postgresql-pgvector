@@ -19,7 +19,7 @@ The application follows these steps to provide responses to your questions:
 5. Response Generation: The selected chunks are passed to the language model, which generates a response based on the relevant content of the PDFs.
 
 ## Dependencies and Installation
-----------------------------
+
 To install the GenAI Q&A with pgvector and Amazon Aurora PostgreSQL App, please follow these steps:
 
 1. Clone the repository to your local machine.
@@ -34,7 +34,7 @@ To install the GenAI Q&A with pgvector and Amazon Aurora PostgreSQL App, please 
 3. Create a `.env` file in your project directory similar to `env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB environment variables. If you don't have one, create a new access token - [HuggingFace](https://huggingface.co/settings/tokens).
 
 ## Usage
------
+
 To use the GenAI Q&A with pgvector and Amazon Aurora PostgreSQL App, follow these steps:
 
 1. Ensure that you have installed the required dependencies and added the HuggingFace API key to the `.env` file.
@@ -53,13 +53,13 @@ To use the GenAI Q&A with pgvector and Amazon Aurora PostgreSQL App, follow thes
 6. Ask questions in natural language about the loaded PDFs using the search interface.
 
 ## I am encountering an error about token dimension mismatch (1536 vs 768)
------
+
 Follow the recommendations from this [GitHub Issue thread](https://github.com/hwchase17/langchain/issues/2219).
 
 ## Contributing
-------------
+
 This repository is intended for educational purposes and does not accept further contributions. Feel free to utilize and enhance the app based on your own requirements.
 
 ## License
--------
+
 The The GenAI Q&A Chatbot with pgvector and Amazon Aurora PostgreSQL-compatible edition application is released under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html).
