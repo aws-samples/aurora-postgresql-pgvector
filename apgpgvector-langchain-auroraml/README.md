@@ -1,4 +1,4 @@
-# Unleashing the Power of Generative AI: Harnessing pgvector and Amazon Aurora PostgreSQL for NLP, Chatbots and Sentiment Analysis
+# Leveraging pgvector and Amazon Aurora PostgreSQL for Natural Language Processing, Chatbots and Sentiment Analysis
 
 ## Introduction - pgvector and Aurora Machine Learning for Sentiment Analysis
 ------------
