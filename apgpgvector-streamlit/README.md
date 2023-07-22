@@ -50,7 +50,7 @@ To use the GenAI Q&A with pgvector and Amazon Aurora PostgreSQL App, follow thes
 
 2. Ensure that you have added the Aurora PostgreSQL DB credentials to the `.env` file.
 
-3. Ensure you have installed the extension `pgvector' on your Aurora PostgreSQL DB cluster:
+3. Ensure you have installed the extension `pgvector` on your Aurora PostgreSQL DB cluster:
    ```
    CREATE EXTENSION vector;
    ```
