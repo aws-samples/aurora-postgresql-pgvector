@@ -12,12 +12,24 @@ Please follow these steps:
 
 2. Create a new [virtual environment](https://docs.python.org/3/library/venv.html#module-venv) and launch it.
 
-3. Install the required dependencies by running the following command:
-   ```
-   pip install -r requirements.txt
-   ```
+3. Create a `.env` file in your project directory similar to `env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB details. If you don't have one, create a new access token - [HuggingFace](https://huggingface.co/settings/tokens). Your .env file should like the following:
 
-4. Create a `.env` file in your project directory similar to `env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB environment variables. If you don't have one, create a new access token - [HuggingFace](https://huggingface.co/settings/tokens).
+```
+HUGGINGFACEHUB_API_TOKEN=<<access_token>>
+
+PGVECTOR_DRIVER='psycopg2'
+PGVECTOR_USER='<<Username>>'
+PGVECTOR_PASSWORD='<<Password>>'
+PGVECTOR_HOST='<<Aurora DB Cluster host'
+PGVECTOR_PORT=5432
+PGVECTOR_DATABASE='<<DBName>>'
+```
+
+4. Install the required dependencies by running the following command:
+
+```
+pip install -r requirements.txt
+```
 
 5. Make sure you have Jupyter notebook installed. For this demo, I have used the [Jupyter notebook](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) extension in VS code (highly recommended for local testing). 
 
@@ -29,7 +41,14 @@ Please follow these steps:
 
 2. Ensure that you have added the Aurora PostgreSQL DB credentials to the `.env` file.
 
-3. Run the `pgvector_with_langchain_auroraml.ipynb` notebook.
+3. Ensure you have installed the extension `pgvector` and `aws_ml` on your Aurora PostgreSQL DB cluster:
+
+```
+CREATE EXTENSION IF NOT EXISTS aws_ml CASCADE;
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+5. Step through and run each cell in the `pgvector_with_langchain_auroraml.ipynb` notebook.
 
 ## I am encountering an error about token dimension mismatch (1536 vs 768)
 
