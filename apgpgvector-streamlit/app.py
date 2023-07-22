@@ -10,7 +10,6 @@ from htmlTemplates import css, bot_template, user_template
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import os
 
-
 def get_pdf_text(pdf_docs):
     text = ""
     for pdf in pdf_docs:
@@ -31,19 +30,15 @@ def get_text_chunks(text):
     chunks = text_splitter.split_text(text)
     return chunks
 
-CONNECTION_STRING = PGVector.connection_string_from_db_params(                                                  
-    driver = os.environ.get("PGVECTOR_DRIVER"),
-    user = os.environ.get("PGVECTOR_USER"),                                      
-    password = os.environ.get("PGVECTOR_PASSWORD"),                                  
-    host = os.environ.get("PGVECTOR_HOST"),                                            
-    port = os.environ.get("PGVECTOR_PORT"),                                          
-    database = os.environ.get("PGVECTOR_DATABASE")                                       
-)       
 
 def get_vectorstore(text_chunks):
     embeddings = HuggingFaceInstructEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
-    vectorstore = PGVector.from_texts(texts=text_chunks, embedding=embeddings,connection_string=CONNECTION_STRING)
-    return vectorstore
+    if text_chunks is None:
+        return PGVector(
+            connection_string=CONNECTION_STRING,
+            embedding_function=embeddings,
+        )
+    return PGVector.from_texts(texts=text_chunks, embedding=embeddings, connection_string=CONNECTION_STRING)
 
 
 def get_conversation_chain(vectorstore):
@@ -60,7 +55,12 @@ def get_conversation_chain(vectorstore):
 
 
 def handle_userinput(user_question):
-    response = st.session_state.conversation({'question': user_question})
+    try:
+        response = st.session_state.conversation({'question': user_question})
+    except ValueError:
+        st.write("Sorry, please ask again in a different way.")
+        return
+
     st.session_state.chat_history = response['chat_history']
 
     for i, message in enumerate(st.session_state.chat_history):
@@ -73,7 +73,6 @@ def handle_userinput(user_question):
 
 
 def main():
-    load_dotenv()
     st.set_page_config(page_title="Streamlit Question Answering App",
                        page_icon=":books::parrot:")
     st.write(css, unsafe_allow_html=True)
@@ -88,7 +87,7 @@ def main():
 )
 
     if "conversation" not in st.session_state:
-        st.session_state.conversation = None
+        st.session_state.conversation = get_conversation_chain(get_vectorstore(None))
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = None
 
@@ -100,7 +99,7 @@ def main():
     with st.sidebar:
         st.subheader("Your documents")
         pdf_docs = st.file_uploader(
-            "Upload your PDFs here and click on 'Process'", accept_multiple_files=True)
+            "Upload your PDFs here and click on 'Process'", type="pdf", accept_multiple_files=True)
         if st.button("Process"):
             with st.spinner("Processing"):
                 # get pdf text
@@ -118,4 +117,15 @@ def main():
 
 
 if __name__ == '__main__':
+    load_dotenv()
+    
+    CONNECTION_STRING = PGVector.connection_string_from_db_params(                                                  
+        driver = os.environ.get("PGVECTOR_DRIVER"),
+        user = os.environ.get("PGVECTOR_USER"),                                      
+        password = os.environ.get("PGVECTOR_PASSWORD"),                                  
+        host = os.environ.get("PGVECTOR_HOST"),                                            
+        port = os.environ.get("PGVECTOR_PORT"),                                          
+        database = os.environ.get("PGVECTOR_DATABASE")                                       
+)  
+
     main()
