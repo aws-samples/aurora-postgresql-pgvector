@@ -48,23 +48,21 @@ To use the GenAI Q&A with pgvector and Amazon Aurora PostgreSQL App, follow thes
 
 1. Ensure that you have installed the required dependencies and added the HuggingFace API access tokens and Aurora PostgreSQL DB details to the `.env` file.
 
-2. Ensure that you have added the Aurora PostgreSQL DB credentials to the `.env` file.
-
-3. Ensure you have installed the extension `pgvector` on your Aurora PostgreSQL DB cluster:
+2. Ensure you have installed the extension `pgvector` on your Aurora PostgreSQL DB cluster:
    ```
    CREATE EXTENSION vector;
    ```
 
-4. Run the `app.py` file using the Streamlit CLI. Execute the following command:
+3. Run the `app.py` file using the Streamlit CLI. Execute the following command:
    ```
    streamlit run app.py
    ```
 
-5. The application will launch in your default web browser, displaying the user interface.
+4. The application will launch in your default web browser, displaying the user interface.
 
-6. Load multiple PDF documents into the app by following the provided instructions.
+5. Load multiple PDF documents into the app by following the provided instructions.
 
-7. Ask questions in natural language about the loaded PDFs using the search interface.
+6. Ask questions in natural language about the loaded PDFs using the search interface.
 
 ## I am encountering an error about token dimension mismatch (1536 vs 768)
 
