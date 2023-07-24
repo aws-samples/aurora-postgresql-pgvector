@@ -20,11 +20,13 @@ The application follows these steps to provide responses to your questions:
 
 ## Dependencies and Installation
 
-To install the GenAI Q&A with pgvector and Amazon Aurora PostgreSQL App, please follow these steps:
+To build the GenAI Q&A chatbot with pgvector and Amazon Aurora PostgreSQL, please follow these steps:
 
 1. Clone the repository to your local machine.
 
-2. Create a `.env` file in your project directory similar to `env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB cluster details. If you don't have one, create a new access token on HuggingFace's website - [HuggingFace](https://huggingface.co/settings/tokens). Your .env file should like the following:
+2. Create a new [virtual environment](https://docs.python.org/3/library/venv.html#module-venv) and launch it.
+
+3. Create a `.env` file in your project directory similar to `env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB cluster details. If you don't have one, create a new access token on HuggingFace's website - [HuggingFace](https://huggingface.co/settings/tokens). Your .env file should like the following:
 ```
 HUGGINGFACEHUB_API_TOKEN=<<access_token>>
 
@@ -35,8 +37,6 @@ PGVECTOR_HOST='<<Aurora DB cluster host'
 PGVECTOR_PORT=5432
 PGVECTOR_DATABASE='<<DBName>>'
 ```
-
-3. Create a new [virtual environment](https://docs.python.org/3/library/venv.html#module-venv) and launch it.
 
 4. Install the required dependencies by running the following command:
    ```
