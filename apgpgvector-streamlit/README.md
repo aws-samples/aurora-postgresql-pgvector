@@ -24,7 +24,11 @@ To build the GenAI Q&A chatbot with pgvector and Amazon Aurora PostgreSQL, pleas
 
 1. Clone the repository to your local machine.
 
-2. Create a new [virtual environment](https://docs.python.org/3/library/venv.html#module-venv) and launch it.
+2. Create a new [virtual environment](https://docs.python.org/3/library/venv.html#module-venv) and activate it.
+```
+python3.9 -m venv env
+source env/bin/activate
+```
 
 3. Create a `.env` file in your project directory similar to `env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB cluster details. If you don't have one, create a new access token on HuggingFace's website - [HuggingFace](https://huggingface.co/settings/tokens). Your .env file should like the following:
 ```
@@ -39,9 +43,9 @@ PGVECTOR_DATABASE='<<DBName>>'
 ```
 
 4. Install the required dependencies by running the following command:
-   ```
-   pip install -r requirements.txt
-   ```
+```
+pip install -r requirements.txt
+```
 
 ## Usage
 
