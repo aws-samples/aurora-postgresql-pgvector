@@ -37,7 +37,7 @@ HUGGINGFACEHUB_API_TOKEN=<<access_token>>
 PGVECTOR_DRIVER='psycopg2'
 PGVECTOR_USER='<<Username>>'
 PGVECTOR_PASSWORD='<<Password>>'
-PGVECTOR_HOST='<<Aurora DB cluster host'
+PGVECTOR_HOST='<<Aurora DB cluster host>>'
 PGVECTOR_PORT=5432
 PGVECTOR_DATABASE='<<DBName>>'
 ```
