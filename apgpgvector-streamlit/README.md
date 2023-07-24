@@ -24,14 +24,14 @@ To install the GenAI Q&A with pgvector and Amazon Aurora PostgreSQL App, please 
 
 1. Clone the repository to your local machine.
 
-2. Create a `.env` file in your project directory similar to `env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB details. If you don't have one, create a new access token on HuggingFace's website - [HuggingFace](https://huggingface.co/settings/tokens). Your .env file should like the following:
+2. Create a `.env` file in your project directory similar to `env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB cluster details. If you don't have one, create a new access token on HuggingFace's website - [HuggingFace](https://huggingface.co/settings/tokens). Your .env file should like the following:
 ```
 HUGGINGFACEHUB_API_TOKEN=<<access_token>>
 
 PGVECTOR_DRIVER='psycopg2'
 PGVECTOR_USER='<<Username>>'
 PGVECTOR_PASSWORD='<<Password>>'
-PGVECTOR_HOST='<<Aurora DB Cluster host'
+PGVECTOR_HOST='<<Aurora DB cluster host'
 PGVECTOR_PORT=5432
 PGVECTOR_DATABASE='<<DBName>>'
 ```
