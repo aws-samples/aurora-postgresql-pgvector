@@ -14,7 +14,12 @@ Please follow these steps:
 
 2. Create a new [virtual environment](https://docs.python.org/3/library/venv.html#module-venv) and launch it.
 
-3. Create a `.env` file in your project directory similar to `env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB details. If you don't have one, create a new access token - [HuggingFace](https://huggingface.co/settings/tokens). Your .env file should like the following:
+```
+python3.9 -m venv env
+source env/bin/activate
+```
+
+4. Create a `.env` file in your project directory similar to `env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB details. If you don't have one, create a new access token - [HuggingFace](https://huggingface.co/settings/tokens). Your .env file should like the following:
 
 ```
 HUGGINGFACEHUB_API_TOKEN=<<access_token>>
