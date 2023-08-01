@@ -3,7 +3,6 @@ langchain
 PyPDF2==3.0.1
 python-dotenv
 psycopg2-binary==2.9.6
-streamlit==1.18.1
 altair==4.0
 pgvector==0.1.8
 huggingface-hub==0.14.1
