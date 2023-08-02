@@ -25,11 +25,11 @@ source env/bin/activate
 HUGGINGFACEHUB_API_TOKEN=<<access_token>>
 
 PGVECTOR_DRIVER='psycopg2'
-PGVECTOR_USER='<<Username>>'
-PGVECTOR_PASSWORD='<<Password>>'
-PGVECTOR_HOST='<<Aurora DB Cluster host>>'
+PGVECTOR_USER='<username>'
+PGVECTOR_PASSWORD='<password>'
+PGVECTOR_HOST='<Aurora DB Cluster host>'
 PGVECTOR_PORT=5432
-PGVECTOR_DATABASE='<<DBName>>'
+PGVECTOR_DATABASE='<dbname>'
 ```
 
 4. Install the required dependencies by running the following command:
