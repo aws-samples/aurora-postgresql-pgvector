@@ -1,9 +1,9 @@
 langchain
 python-dotenv
-jupyter==1.0.0
-psycopg==3.1.8
-psycopg2-binary==2.9.6
-pgvector==0.1.8
-huggingface-hub==0.14.1
-InstructorEmbedding==1.0.1
-sentence-transformers==2.2.2
+jupyter
+psycopg
+psycopg2-binary
+pgvector
+huggingface-hub
+InstructorEmbedding
+sentence-transformers
