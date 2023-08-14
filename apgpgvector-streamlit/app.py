@@ -112,8 +112,9 @@ def main():
                 vectorstore = get_vectorstore(text_chunks)
 
                 # create conversation chain
-                st.session_state.conversation = get_conversation_chain(
-                    vectorstore)
+                st.session_state.conversation = get_conversation_chain(vectorstore)
+
+                st.success('PDF uploaded successfully!', icon="✅")
 
 
 if __name__ == '__main__':
