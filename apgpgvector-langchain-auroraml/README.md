@@ -6,6 +6,10 @@
 
 Note: This demo involves creating an IAM Role and an associated IAM Policy to allow Amazon Aurora to interface with Amazon Comprehend. For steps on how to do this, please read through the blog post: [Leverage pgvector and Amazon Aurora PostgreSQL for Natural Language Processing, Chatbots and Sentiment Analysis](https://aws.amazon.com/blogs/database/leverage-pgvector-and-amazon-aurora-postgresql-for-natural-language-processing-chatbots-and-sentiment-analysis/).
 
+## Architecture
+
+![Architecture](static/APG-pgvector-sagemaker.png)
+
 ## Dependencies and Installation
 
 Please follow these steps:
