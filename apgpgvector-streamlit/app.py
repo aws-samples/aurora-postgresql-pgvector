@@ -75,6 +75,7 @@ def handle_userinput(user_question):
 
 def main():
     st.set_page_config(page_title="Streamlit Question Answering App",
+                       layout="wide",
                        page_icon=":books::parrot:")
     st.write(css, unsafe_allow_html=True)
 
