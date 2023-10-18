@@ -6,7 +6,7 @@ The GenAI Q&A Chatbot with pgvector and Amazon Aurora PostgreSQL-compatible edit
 
 ## Conceptual Flow Diagram
 
-![Architecture](static/APG-pgvector-streamlit.png)
+![Architecture](static/RAG_APG.png)
 
 ## How It Works
 
@@ -34,10 +34,9 @@ python3.9 -m venv env
 source env/bin/activate
 ```
 
-3. Create a `.env` file in your project directory similar to `env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB cluster details. If you don't have one, create a new access token on HuggingFace's website - [HuggingFace](https://huggingface.co/settings/tokens). Your .env file should like the following:
+3. Create a `.env` file in your project directory similar to `env.example` to add your HuggingFace access tokens and Aurora PostgreSQL DB cluster details. Your .env file should like the following:
+   
 ```
-HUGGINGFACEHUB_API_TOKEN=<<access_token>>
-
 PGVECTOR_DRIVER='psycopg2'
 PGVECTOR_USER='<<Username>>'
 PGVECTOR_PASSWORD='<<Password>>'
@@ -55,27 +54,26 @@ pip install -r requirements.txt
 
 To use the GenAI Q&A with pgvector and Amazon Aurora PostgreSQL App, follow these steps:
 
-1. Ensure that you have installed the required dependencies and added the HuggingFace API access tokens and Aurora PostgreSQL DB details to the `.env` file.
+1. Ensure that you have installed the required dependencies and have access to Amazon Bedrock models that you wish to use.
 
-2. Ensure you have installed the extension `pgvector` on your Aurora PostgreSQL DB cluster:
+2. Ensure that you have added Aurora PostgreSQL DB details to the `.env` file.
+
+3. Ensure you have installed the extension `pgvector` on your Aurora PostgreSQL DB cluster:
    ```
    CREATE EXTENSION vector;
    ```
 
-3. Run the `app.py` file using the Streamlit CLI. Execute the following command:
+4. Run the `app.py` file using the Streamlit CLI. Execute the following command:
    ```
    streamlit run app.py
    ```
 
-4. The application will launch in your default web browser, displaying the user interface.
+5. The application will launch in your default web browser, displaying the user interface.
 
-5. Load multiple PDF documents into the app by following the provided instructions.
+6. Load multiple PDF documents into the app by following the provided instructions.
 
-6. Ask questions in natural language about the loaded PDFs using the search interface.
+7. Ask questions in natural language about the loaded PDFs using the search interface.
 
-## I am encountering an error about token dimension mismatch (1536 vs 768)
-
-Follow the recommendations from this [GitHub Issue thread](https://github.com/hwchase17/langchain/issues/2219).
 
 ## Contributing
 
