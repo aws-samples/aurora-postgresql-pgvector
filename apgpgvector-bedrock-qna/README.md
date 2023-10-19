@@ -2,7 +2,7 @@
 
 ## Introduction - Build and deploy an AI-powered chatbot application
 
-The GenAI Q&A Chatbot with pgvector and Amazon Aurora PostgreSQL-compatible edition application is a Python application that allows you to interact with multiple PDF documents. You can ask questions about the PDFs using natural language, and the application will provide relevant responses based on the content of the documents. This app utilizes a language model to generate accurate answers to your queries. Please note that the app will only respond to questions related to the loaded PDFs.
+In this lab, we provide a step-by-step guide with all the building blocks for creating an enterprise ready RAG application such as a question answering chatbot. We use a combination of different AWS services including [Amazon Bedrock](https://aws.amazon.com/bedrock/), an easy way to build and scale generative AI applications with foundation models. We use [Titan Text](https://aws.amazon.com/bedrock/titan/) for text embeddings and [Anthropic's Claude on Amazon Bedrock](https://aws.amazon.com/bedrock/claude/) as our LLM and the pgvector extension on Amazon Aurora PostgreSQL-Compatible Edition as our vector database. We also demonstrate integration with open-source frameworks such as LangChain for interfacing with all the components and Streamlit for building the chatbot frontend.
 
 ## Architecture
 
@@ -12,15 +12,19 @@ The GenAI Q&A Chatbot with pgvector and Amazon Aurora PostgreSQL-compatible edit
 
 The application follows these steps to provide responses to your questions:
 
-1. PDF Loading: The app reads multiple PDF documents and extracts their text content.
+1. **PDF Loading**: The app reads PDF documents and extracts their text content.
 
-2. Text Chunking: The extracted text is divided into smaller chunks that can be processed effectively.
+2. **Text Chunking**: The extracted text is divided into smaller chunks that can be processed effectively.
 
-3. Language Model: The application utilizes a language model to generate vector representations (embeddings) of the text chunks.
+3. **Embedding**: The application utilizes Titan Text from Amazon Bedrock to generate vector representations (embeddings) of the text chunks.
 
-4. Similarity Matching: When you ask a question, the app compares it with the text chunks and identifies the most semantically similar ones.
+4. **User Question**: The user asks a question in natural language. 
 
-5. Response Generation: The selected chunks are passed to the language model, which generates a response based on the relevant content of the PDFs.
+5. **Similarity Matching**: When the user asks a question, the app compares it with the text chunks and identifies the most semantically similar ones.
+
+6. **RAG**: The user question and the context from the vector database is passed to the LLM (Anthropic's Claude on Amazon Bedrock).
+
+7. **Response Generation**: The LLM generates a response based on the relevant content of the PDFs.
 
 ## Dependencies and Installation
 
