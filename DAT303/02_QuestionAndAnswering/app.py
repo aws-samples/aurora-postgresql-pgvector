@@ -35,7 +35,7 @@ def get_text_chunks(text):
 
 
 def get_vectorstore(text_chunks):
-    embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-g1-text-02", client=BEDROCK_CLIENT)
+    embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-text-v1", client=BEDROCK_CLIENT)
     if text_chunks is None:
         return PGVector(
             connection_string=CONNECTION_STRING,
