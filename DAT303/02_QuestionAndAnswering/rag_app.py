@@ -1,35 +1,64 @@
-# TODO: Add imports here
-
-
+# Import libraries
+from dotenv import load_dotenv
+from PyPDF2 import PdfReader
+from langchain.vectorstores.pgvector import PGVector
+from langchain.memory import ConversationSummaryBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+from htmlTemplates import css
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings import BedrockEmbeddings
+from langchain.llms import Bedrock
+from langchain.prompts import PromptTemplate
+import streamlit as st
+import boto3
+from PIL import Image
+import os
+import traceback
 
 # TODO: This function takes a list of PDF documents as input and extracts the text from them using PdfReader. 
 # It concatenates the extracted text and returns it.
-def get_pdf_text(pdf_docs):
     
 
 
 # TODO: Given the extracted text, this function splits it into smaller chunks using the RecursiveCharacterTextSplitter module. 
 # The chunk size, overlap, and other parameters are configured to optimize processing efficiency.
-def get_text_chunks(text):
     
     
 
 # TODO: This function takes the text chunks as input and creates a vector store using Bedrock Embeddings (Titan) and pgvector. 
 # The vector store stores the vector representations of the text chunks, enabling efficient retrieval based on semantic similarity.
-def get_vectorstore(text_chunks):
     
 
 
 # TODO: Here, a conversation chain is created using the conversational AI model (Anthropic's Claude v2), vector store (created in the previous function), and conversation memory (ConversationSummaryBufferMemory). 
 # This chain allows the Gen AI app to engage in conversational interactions.
-def get_conversation_chain(vectorstore):
     
 
 
-# TODO: This function is responsible for processing the user's input question and generating a response from the chatbot
+# This function is responsible for processing the user's input question and generating a response from the chatbot
 def handle_userinput(user_question):
     
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = None
+    
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+        
+    try:
+        response = st.session_state.conversation({'question': user_question})
+        
+    except ValueError:
+        st.write("Sorry, I didn't understand that. Could you rephrase your question?")
+        print(traceback.format_exc())
+        return
 
+    st.session_state.chat_history = response['chat_history']
+
+    for i, message in enumerate(st.session_state.chat_history):
+        if i % 2 == 0:
+            st.success(message.content, icon="🤔")
+        else:
+            st.write(message.content)
 
 def main():
     # Set the page configuration for the Streamlit application, including the page title and icon.
@@ -50,9 +79,12 @@ def main():
     """
     )
     
-    # TODO: Check if the conversation and chat history are not present in the session state and initialize them to None.
+    # Check if the conversation and chat history are not present in the session state and initialize them to None.
+    if "conversation" not in st.session_state:
+        st.session_state.conversation = get_conversation_chain(get_vectorstore(None))
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = None
     
-
     # A header with the text appears at the top of the Streamlit application.
     st.header("Generative AI Q&A with Amazon Bedrock, Aurora PostgreSQL and pgvector :books::parrot:")
     subheader = '<p style="font-family:Calibri (Body); color:Grey; font-size: 16px;">Leverage Foundational Models from <a href="https://aws.amazon.com/bedrock/">Amazon Bedrock</a> and <a href="https://github.com/pgvector/pgvector">pgvector</a> as Vector Engine</p>'
@@ -62,32 +94,41 @@ def main():
     image = Image.open("static/RAG_APG.png")
     st.image(image, caption='Generative AI Q&A with Amazon Bedrock, Aurora PostgreSQL and pgvector')
     
-    # TODO: Create a text input box where you can ask questions about your documents.
+    # Create a text input box where you can ask questions about your documents.
+    user_question = st.text_input("Ask a question about your documents:", placeholder="What is Amazon Aurora?")
     
+    # Define a Go button for user action
+    go_button = st.button("Submit", type="secondary")
     
-    
-    # TODO: Define a Go button for user action
-    
-    
-    
-    # TODO: If the go button is pressed or the user enters a question, it calls the handle_userinput() function to process the user's input.
+    # If the go button is pressed or the user enters a question, it calls the handle_userinput() function to process the user's input.
     if go_button or user_question:
         with st.spinner("Processing..."):
-    
-    
+            handle_userinput(user_question)
+
     with st.sidebar:
         st.subheader("Your documents")
         pdf_docs = st.file_uploader(
             "Upload your PDFs here and click on 'Process'", type="pdf", accept_multiple_files=True)
-    
-    # TODO: If the user clicks the "Process" button, the following code is executed:
-    # i. raw_text = get_pdf_text(pdf_docs): retrieves the text content from the uploaded PDF documents.
-    # ii. text_chunks = get_text_chunks(raw_text): splits the text content into smaller chunks for efficient processing.
-    # iii. vectorstore = get_vectorstore(text_chunks): creates a vector store that stores the vector representations of the text chunks.
-    if st.button("Process"):
-        with st.spinner("Processing"):
-    
-    
+        
+        # If the user clicks the "Process" button, the following code is executed:
+        # i. raw_text = get_pdf_text(pdf_docs): retrieves the text content from the uploaded PDF documents.
+        # ii. text_chunks = get_text_chunks(raw_text): splits the text content into smaller chunks for efficient processing.
+        # iii. vectorstore = get_vectorstore(text_chunks): creates a vector store that stores the vector representations of the text chunks.
+        if st.button("Process"):
+            with st.spinner("Processing"):
+                # get pdf text
+                raw_text = get_pdf_text(pdf_docs)
+
+                # get the text chunks
+                text_chunks = get_text_chunks(raw_text)
+
+                # create vector store
+                vectorstore = get_vectorstore(text_chunks)
+
+                # create conversation chain
+                st.session_state.conversation = get_conversation_chain(vectorstore)
+
+                st.success('PDF uploaded successfully!', icon="✅")
     
     with st.sidebar:
         st.divider()
@@ -105,18 +146,22 @@ def main():
     8. How can I improve upon the availability of a single Amazon Aurora database?
     """
 )
-    
+
 if __name__ == '__main__':
     # This function loads the environment variables from a .env file.
     load_dotenv()
     
+    # Define the Bedrock client.
+    BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-west-2')
     
-    # TODO: Define the Bedrock client
-    
-    
-    
-    # TODO: Create the connection string for pgvector from .env file.
-    
-    
-    
+    # Create the connection string for pgvector from .env file.
+    CONNECTION_STRING = PGVector.connection_string_from_db_params(                                                  
+        driver = os.environ.get("PGVECTOR_DRIVER"),
+        user = os.environ.get("PGVECTOR_USER"),                                      
+        password = os.environ.get("PGVECTOR_PASSWORD"),                                  
+        host = os.environ.get("PGVECTOR_HOST"),                                            
+        port = os.environ.get("PGVECTOR_PORT"),                                          
+        database = os.environ.get("PGVECTOR_DATABASE")                                       
+    )  
+
     main()
