@@ -1,5 +1,4 @@
 # Import libraries
-import streamlit as st
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
 from langchain.vectorstores.pgvector import PGVector
@@ -10,11 +9,14 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import BedrockEmbeddings
 from langchain.llms import Bedrock
 from langchain.prompts import PromptTemplate
+import streamlit as st
 import boto3
 from PIL import Image
 import os
 import traceback
 
+# This function takes a list of PDF documents as input and extracts the text from them using PdfReader. 
+# It concatenates the extracted text and returns it.
 def get_pdf_text(pdf_docs):
     text = ""
     for pdf in pdf_docs:
@@ -23,6 +25,8 @@ def get_pdf_text(pdf_docs):
             text += page.extract_text()
     return text
 
+# Given the extracted text, this function splits it into smaller chunks using the RecursiveCharacterTextSplitter module. 
+# The chunk size, overlap, and other parameters are configured to optimize processing efficiency.
 def get_text_chunks(text):
     text_splitter = RecursiveCharacterTextSplitter(
         separators=["\n\n", "\n", ".", " "],
@@ -34,8 +38,10 @@ def get_text_chunks(text):
     chunks = text_splitter.split_text(text)
     return chunks
 
-
+# This function takes the text chunks as input and creates a vector store using Bedrock Embeddings (Titan) and pgvector. 
+# The vector store stores the vector representations of the text chunks, enabling efficient retrieval based on semantic similarity.
 def get_vectorstore(text_chunks):
+    # Create the Titan embeddings
     embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-text-v1", client=BEDROCK_CLIENT)
     if text_chunks is None:
         return PGVector(
@@ -44,14 +50,16 @@ def get_vectorstore(text_chunks):
         )
     return PGVector.from_texts(texts=text_chunks, embedding=embeddings, connection_string=CONNECTION_STRING)
         
-
+# Here, a conversation chain is created using the conversational AI model (Anthropic's Claude v2), vector store (created in the previous function), and conversation memory (ConversationSummaryBufferMemory). 
+# This chain allows the Gen AI app to engage in conversational interactions.
 def get_conversation_chain(vectorstore):
-    # Use Claude
+    # Define model_id, client and model keyword arguments for Anthropic Claude v2
     llm = Bedrock(model_id="anthropic.claude-v2", client=BEDROCK_CLIENT)
     llm.model_kwargs = {"temperature": 0.5, "max_tokens_to_sample": 8191}
     
-    prompt_template = """
-    Human: You are a helpful assistant that answers questions in detail and only using the information provided in the context below. 
+    # The text that you give Claude is designed to elicit, or "prompt", a relevant output. A prompt is usually in the form of a question or instructions. When prompting Claude through the API, it is very important to use the correct `\n\nHuman:` and `\n\nAssistant:` formatting.
+    # Claude was trained as a conversational agent using these special tokens to mark who is speaking. The `\n\nHuman:` (you) asks a question or gives instructions, and the`\n\nAssistant:` (Claude) responds.
+    prompt_template = """Human: You are a helpful and talkative assistant that answers questions directly and only using the information provided in the context below. 
     Guidance for answers:
         - Always use English as the language in your responses.
         - In your answers, always use a professional tone.
@@ -93,7 +101,7 @@ def get_conversation_chain(vectorstore):
     
     return conversation_chain
 
-
+# This function is responsible for processing the user's input question and generating a response from the chatbot
 def handle_userinput(user_question):
     
     if "chat_history" not in st.session_state:
@@ -119,6 +127,7 @@ def handle_userinput(user_question):
             st.write(message.content)
 
 def main():
+    # Set the page configuration for the Streamlit application, including the page title and icon.
     st.set_page_config(page_title="Generative AI Q&A with Amazon Bedrock, Aurora PostgreSQL and pgvector",
                        layout="wide",
                        page_icon=":books::parrot:")
@@ -135,21 +144,29 @@ def main():
     3. Type your question in the search bar to get more insights
     """
     )
-
+    
+    # Check if the conversation and chat history are not present in the session state and initialize them to None.
     if "conversation" not in st.session_state:
         st.session_state.conversation = get_conversation_chain(get_vectorstore(None))
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = None
-
+    
+    # A header with the text appears at the top of the Streamlit application.
     st.header("Generative AI Q&A with Amazon Bedrock, Aurora PostgreSQL and pgvector :books::parrot:")
     subheader = '<p style="font-family:Calibri (Body); color:Grey; font-size: 16px;">Leverage Foundational Models from <a href="https://aws.amazon.com/bedrock/">Amazon Bedrock</a> and <a href="https://github.com/pgvector/pgvector">pgvector</a> as Vector Engine</p>'
+    
+    # Write the CSS style to the Streamlit application, allowing you to customize the appearance.
     st.markdown(subheader, unsafe_allow_html=True)
     image = Image.open("static/RAG_APG.png")
     st.image(image, caption='Generative AI Q&A with Amazon Bedrock, Aurora PostgreSQL and pgvector')
     
+    # Create a text input box where you can ask questions about your documents.
     user_question = st.text_input("Ask a question about your documents:", placeholder="What is Amazon Aurora?")
-
+    
+    # Define a Go button for user action
     go_button = st.button("Submit", type="secondary")
+    
+    # If the go button is pressed or the user enters a question, it calls the handle_userinput() function to process the user's input.
     if go_button or user_question:
         with st.spinner("Processing..."):
             handle_userinput(user_question)
@@ -158,7 +175,11 @@ def main():
         st.subheader("Your documents")
         pdf_docs = st.file_uploader(
             "Upload your PDFs here and click on 'Process'", type="pdf", accept_multiple_files=True)
-    
+        
+        # If the user clicks the "Process" button, the following code is executed:
+        # i. raw_text = get_pdf_text(pdf_docs): retrieves the text content from the uploaded PDF documents.
+        # ii. text_chunks = get_text_chunks(raw_text): splits the text content into smaller chunks for efficient processing.
+        # iii. vectorstore = get_vectorstore(text_chunks): creates a vector store that stores the vector representations of the text chunks.
         if st.button("Process"):
             with st.spinner("Processing"):
                 # get pdf text
@@ -193,10 +214,13 @@ def main():
 )
 
 if __name__ == '__main__':
+    # This function loads the environment variables from a .env file.
     load_dotenv()
     
+    # Define the Bedrock client.
     BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-west-2')
     
+    # Create the connection string for pgvector from .env file.
     CONNECTION_STRING = PGVector.connection_string_from_db_params(                                                  
         driver = os.environ.get("PGVECTOR_DRIVER"),
         user = os.environ.get("PGVECTOR_USER"),                                      
@@ -204,6 +228,6 @@ if __name__ == '__main__':
         host = os.environ.get("PGVECTOR_HOST"),                                            
         port = os.environ.get("PGVECTOR_PORT"),                                          
         database = os.environ.get("PGVECTOR_DATABASE")                                       
-)  
+    )  
 
     main()
