@@ -43,7 +43,12 @@ function clone_git()
     echo "Cloning the git repository"
     print_line
     cd ${HOME}/environment
+    rm -rf ${PROJ_NAME}
     git clone ${GITHUB_URL}${PROJ_NAME}
+    cd ${PROJ_NAME}
+    rm -rf apgpgvector-streamlit
+    rm -rf apgpgvector-similiarity-search
+    rm -rf apgpgvector-langchain-auroraml
     print_line
 }
 
@@ -71,6 +76,14 @@ function configure_pg()
     echo "export PGUSER=$PGUSER" >> /home/ec2-user/.bashrc
     echo "export PGPASSWORD='$PGPASSWORD'" >> /home/ec2-user/.bashrc
     echo "export PGHOST=$PGHOST" >> /home/ec2-user/.bashrc
+
+
+    echo "export PGVECTOR_DRIVER='psycopg2'" >> /home/ec2-user/.bashrc
+    echo "export PGVECTOR_USER=${PGUSER}" >> /home/ec2-user/.bashrc
+    echo "export PGVECTOR_PASSWORD='$PGPASSWORD'" >> /home/ec2-user/.bashrc
+    echo "export PGVECTOR_HOST=$PGHOST" >> /home/ec2-user/.bashrc
+    echo "export PGVECTOR_PORT=5432" >> /home/ec2-user/.bashrc
+    echo "export PGVECTOR_DATABASE='postgres'" >> /home/ec2-user/.bashrc
 }
 
 function install_extension()
@@ -105,7 +118,7 @@ function install_python39()
 function install_requirements()
 {
     echo "Installing python requirements"
-    cd $HOME/environment/${PROJ_NAME}
+    cd $HOME/environment/${PROJ_NAME}/DAT303/02_QuestionAndAnswering
     pip3.9 install -r requirements.txt > ${TERM} 2>&1
     echo "Shell output of installing requirements ${?}"
 
@@ -145,3 +158,4 @@ install_requirements
 print_line
 
 echo "Process completed at `date`"
+
