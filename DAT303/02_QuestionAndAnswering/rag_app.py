@@ -60,6 +60,7 @@ def handle_userinput(user_question):
         else:
             st.write(message.content)
 
+# Streamlit components
 def main():
     # Set the page configuration for the Streamlit application, including the page title and icon.
     st.set_page_config(page_title="Generative AI Q&A with Amazon Bedrock, Aurora PostgreSQL and pgvector",
