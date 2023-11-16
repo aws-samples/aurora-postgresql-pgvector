@@ -16,6 +16,7 @@ from langchain.callbacks.base import BaseCallbackHandler
 from langchain.schema import ChatMessage
 import streamlit as st
 from dotenv import load_dotenv
+from PIL import Image
 import os
 import boto3
 
@@ -67,7 +68,10 @@ def main():
     # A header with the text appears at the top of the Streamlit application.
     st.header("Generative AI Streaming Chat with Amazon Bedrock, Aurora PostgreSQL and pgvector :books::parrot:")
     subheader = '<p style="font-family:Calibri (Body); color:Grey; font-size: 16px;">Leverage Foundational Models from <a href="https://aws.amazon.com/bedrock/">Amazon Bedrock</a> and <a href="https://github.com/pgvector/pgvector">pgvector</a> as Vector Engine</p>'
+    
+    # Write the CSS style to the Streamlit application, allowing you to customize the appearance.
     st.markdown(subheader, unsafe_allow_html=True)
+    st.image(Image.open("static/Streaming_RAG_APG.png"))
     
     # A chat message can be associated with an AI assistant, a human or a system role. Here we are displaying the question (asked by the human) and the response (answered by the AI assistant) alternately.
     for msg in st.session_state.messages:
