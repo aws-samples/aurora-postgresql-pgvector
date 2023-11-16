@@ -155,7 +155,7 @@ def main():
         # i. raw_text = get_pdf_text(pdf_docs): retrieves the text content from the uploaded PDF documents.
         # ii. text_chunks = get_text_chunks(raw_text): splits the text content into smaller chunks for efficient processing.
         # iii. vectorstore = get_vectorstore(text_chunks): creates a vector store that stores the vector representations of the text chunks.
-       if st.button("Process"):
+        if st.button("Process"):
             with st.spinner("Processing"):
                 # get pdf text
                 raw_text = get_pdf_text(pdf_docs)
