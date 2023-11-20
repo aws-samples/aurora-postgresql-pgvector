@@ -17,22 +17,22 @@ import traceback
 
 # TODO: This function takes a list of PDF documents as input and extracts the text from them using PdfReader. 
 # It concatenates the extracted text and returns it.
-    
+
 
 
 # TODO: Given the extracted text, this function splits it into smaller chunks using the RecursiveCharacterTextSplitter module. 
 # The chunk size, overlap, and other parameters are configured to optimize processing efficiency.
-    
-    
+
+
 
 # TODO: This function takes the text chunks as input and creates a vector store using Bedrock Embeddings (Titan) and pgvector. 
 # The vector store stores the vector representations of the text chunks, enabling efficient retrieval based on semantic similarity.
-    
+
 
 
 # TODO: Here, a conversation chain is created using the conversational AI model (Anthropic's Claude v2), vector store (created in the previous function), and conversation memory (ConversationSummaryBufferMemory). 
 # This chain allows the Gen AI app to engage in conversational interactions.
-    
+
 
 
 # This function is responsible for processing the user's input question and generating a response from the chatbot
