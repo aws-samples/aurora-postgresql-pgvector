@@ -62,15 +62,25 @@ function configure_pg()
         --region $AWS_REGION \
         --query 'DBClusterEndpoints[0].Endpoint' \
         --output text`
+    export PGHOST
 
     # Retrieve credentials from Secrets Manager - Secret: apgpg-pgvector-secret
     CREDS=`aws secretsmanager get-secret-value \
         --secret-id apgpg-pgvector-secret \
         --region $AWS_REGION | jq -r '.SecretString'`
 
-    export PGUSER="`echo $CREDS | jq -r '.username'`"
-    export PGPASSWORD="`echo $CREDS | jq -r '.password'`"
-    export PGHOST
+    PGPASSWORD="`echo $CREDS | jq -r '.password'`"
+    if [ "${PGPASSWORD}X" == "X" ]; then
+        PGPASSWORD="postgres"
+    fi
+    export PGPASSWORD
+
+    PGUSER="postgres"
+    PGUSER="`echo $CREDS | jq -r '.username'`"
+    if [ "${PGUSER}X" == "X" ]; then
+        PGUSER="postgres"
+    fi
+    export PGUSER
 
     # Persist values in future terminals
     echo "export PGUSER=$PGUSER" >> /home/ec2-user/.bashrc
@@ -132,6 +142,83 @@ function install_c9()
     print_line
 }
 
+
+function check_installation()
+{
+    overall="True"
+    #Checking postgresql 
+    psql -c "select version()" | grep PostgreSQL > /dev/null 2>&1
+    if [ $? -eq 0 ] ; then
+        echo "PostgreSQL installation successful : OK"
+    else
+        echo "PostgreSQL installation FAILED : NOTOK"
+	overall="False"
+    fi
+    
+    # Checking clone
+    if [ -d ${HOME}/environment/${PROJ_NAME}/DAT303 ] ; then 
+        echo "Git Clone successful : OK"
+    else
+        echo "Git Clone FAILED : NOTOK"
+	overall="False"
+    fi
+   
+    # Checking c9
+    
+    c9 --version > /dev/null 2>&1
+    if [ $? -eq 0 ] ; then
+        echo "C9 installation successful : OK"
+    else
+        echo "C9 installation FAILED : NOTOK"
+	overall="False"
+    fi
+
+    # Checking python3.9
+    /usr/local/bin/python3.9 --version | grep Python  > /dev/null 2>&1
+    if [ $? -eq 0 ] ; then
+        echo "Python installation successful : OK"
+    else
+        echo "Python installation FAILED : NOTOK"
+	overall="False"
+    fi
+
+    # Checking python3.9
+    streamlit --version | grep Streamlit > /dev/null 2>&1
+    if [ $? -eq 0 ] ; then
+        echo "Streamlit installation successful : OK"
+    else
+        echo "Streamlit installation FAILED : NOTOK"
+	overall="False"
+    fi
+
+    echo "=================================="
+    if [ ${overall} == "True" ] ; then
+        echo "Overall status : OK"
+    else
+        echo "Overall status : FAILED"
+    fi
+    echo "=================================="
+
+}
+
+
+function cp_logfile()
+{
+
+    bucket_name="dat303-${AWS_ACCOUNT_ID}-`date +%s`"
+    echo ${bucket_name}
+    aws s3 ls | grep ${bucket_name} > /dev/null 2>&1
+    if [ $? -ne 0 ] ; then
+        aws s3 mb s3://${bucket_name} --region ${AWS_REGION}
+    fi
+
+    aws s3 cp ${HOME}/environment/prereq.log s3://${bucket_name} > /dev/null 
+    if [ $? -eq 0 ] ; then
+	echo "Copied the logfile to bucket ${bucket_name}"
+    else
+	echo "Failed to copy logfile to bucket ${bucket_name}"
+    fi
+}
 # Main program starts here
 
 if [ ${1}X == "-xX" ] ; then
@@ -156,6 +243,7 @@ print_line
 install_python39
 install_requirements
 print_line
+check_installation
+cp_logfile
 
 echo "Process completed at `date`"
-
