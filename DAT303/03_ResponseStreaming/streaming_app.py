@@ -32,7 +32,7 @@ import boto3
 
 
 
-# TODO: Create a custom handler and pass a streamlit container to it
+# TODO: Create a custom handler and pass a streamlit container to it.
 
 
 
@@ -40,7 +40,7 @@ import boto3
 # The vector store stores the vector representations of the text chunks, enabling efficient retrieval based on semantic similarity.
 
 
-
+# Streamlit components
 def main():
     # Set the page configuration for the Streamlit application, including the page title and icon.
     st.set_page_config(page_title="Streamlit Question Answering App",
