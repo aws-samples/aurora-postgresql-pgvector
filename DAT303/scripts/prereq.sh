@@ -86,6 +86,7 @@ function configure_pg()
     echo "export PGUSER=$PGUSER" >> /home/ec2-user/.bashrc
     echo "export PGPASSWORD='$PGPASSWORD'" >> /home/ec2-user/.bashrc
     echo "export PGHOST=$PGHOST" >> /home/ec2-user/.bashrc
+    echo "export AWS_REGION=$AWS_REGION" >> /home/ec2-user/.bashrc
 
 
     echo "export PGVECTOR_DRIVER='psycopg2'" >> /home/ec2-user/.bashrc
@@ -212,7 +213,7 @@ function cp_logfile()
         aws s3 mb s3://${bucket_name} --region ${AWS_REGION}
     fi
 
-    aws s3 cp ${HOME}/environment/prereq.log s3://${bucket_name} > /dev/null 
+    aws s3 cp ${HOME}/environment/prereq.log s3://${bucket_name}/prereq_${AWS_ACCOUNT_ID}.txt > /dev/null 
     if [ $? -eq 0 ] ; then
 	echo "Copied the logfile to bucket ${bucket_name}"
     else
