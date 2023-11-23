@@ -30,7 +30,7 @@ import traceback
 
 
 
-# TODO: Here, a conversation chain is created using the conversational AI model (Anthropic's Claude v2), vector store (created in the previous function), and conversation memory (ConversationSummaryBufferMemory). 
+# TODO: In this function, a conversation chain is created using the conversational AI model (Anthropic's Claude v2), vector store (created in the previous function), and conversation memory (ConversationSummaryBufferMemory). 
 # This chain allows the Gen AI app to engage in conversational interactions.
 
 
