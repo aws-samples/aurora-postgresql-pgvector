@@ -59,7 +59,7 @@ def get_conversation_chain(vectorstore):
     
     # The text that you give Claude is designed to elicit, or "prompt", a relevant output. A prompt is usually in the form of a question or instructions. When prompting Claude through the API, it is very important to use the correct `\n\nHuman:` and `\n\nAssistant:` formatting.
     # Claude was trained as a conversational agent using these special tokens to mark who is speaking. The `\n\nHuman:` (you) asks a question or gives instructions, and the`\n\nAssistant:` (Claude) responds.
-    prompt_template = """Human: You are a helpful and talkative assistant that answers questions directly and only using the information provided in the context below. 
+    prompt_template = """Human: You are a helpful assistant that answers questions directly and only using the information provided in the context below. 
     Guidance for answers:
         - Always use English as the language in your responses.
         - In your answers, always use a professional tone.
