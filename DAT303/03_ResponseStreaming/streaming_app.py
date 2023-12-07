@@ -91,7 +91,7 @@ def main():
         with st.chat_message("Assistant"):
             stream_handler = StreamHandler(st.empty())
 
-            llm = Bedrock(model_id="anthropic.claude-v2", streaming=True, callbacks=[stream_handler], client=BEDROCK_CLIENT)
+            llm = Bedrock(model_id="anthropic.claude-v2:1", streaming=True, callbacks=[stream_handler], client=BEDROCK_CLIENT)
             llm.model_kwargs = {"temperature": 0.5, "max_tokens_to_sample": 8191}
 
             general_system_template = """ 
