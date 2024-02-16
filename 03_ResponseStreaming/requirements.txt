@@ -1,5 +1,6 @@
 streamlit==1.24.0
 langchain
+langchain-community
 PyPDF2
 python-dotenv
 psycopg2-binary
