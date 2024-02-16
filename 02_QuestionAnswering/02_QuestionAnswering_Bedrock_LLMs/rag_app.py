@@ -6,8 +6,8 @@ from langchain.memory import ConversationSummaryBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import BedrockEmbeddings
-from langchain.llms import Bedrock
+from langchain_community.embeddings import BedrockEmbeddings
+from langchain_community.llms import Bedrock
 from langchain.prompts import PromptTemplate
 import streamlit as st
 import boto3
