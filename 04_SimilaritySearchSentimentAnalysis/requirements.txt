@@ -1,4 +1,5 @@
 langchain
+langchain-community
 python-dotenv
 jupyter
 psycopg
