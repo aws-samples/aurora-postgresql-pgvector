@@ -93,7 +93,7 @@ def main():
     
     # Write the CSS style to the Streamlit application, allowing you to customize the appearance.
     st.markdown(subheader, unsafe_allow_html=True)
-    st.image(Image.open("static/Streaming_RAG_APG.png"))
+    st.image(Image.open("static/Streaming_Responses_RAG.png"))
     
     # A chat message can be associated with an AI assistant, a human or a system role. Here we are displaying the question (asked by the human) and the response (answered by the AI assistant) alternately.
     for msg in st.session_state.messages:
