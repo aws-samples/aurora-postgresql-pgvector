@@ -6,7 +6,7 @@ python-dotenv
 psycopg2-binary==2.9.6
 altair==4.0
 pgvector
-huggingface-hub
+huggingface_hub
 InstructorEmbedding
-sentence-transformers
+sentence-transformers==2.2.2
 urllib3==1.26.6
