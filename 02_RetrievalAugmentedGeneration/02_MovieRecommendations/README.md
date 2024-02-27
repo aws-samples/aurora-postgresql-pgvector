@@ -10,7 +10,7 @@ Please ensure that you have completed prerequisites as per the [documentation](h
 
 ## Architecture
 
-![Architecture](static/RAG_APG.png)
+![Architecture](static/ARCH.png)
 
 ## How It Works
 
