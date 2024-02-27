@@ -114,7 +114,8 @@ To use the GenAI Q&A with pgvector and Amazon Aurora PostgreSQL App, follow thes
     END LOOP;
     COMMIT;
    END$$;
-   CREATE INDEX ON movie.movies USING hnsw(movie_embedding);
+   CREATE INDEX ON movie.movies
+      USING hnsw (movie_embedding vector_cosine_ops);
    ANALYZE movie.movies;
    ```
 
