@@ -4,12 +4,7 @@ import psycopg2
 import psycopg2.extras
 import os
 import json
-
-dbhost=os.environ.get('DBHOST', 'host.docker.internal')
-dbport=os.environ.get('DBPORT', 5432)
-dbuser=os.environ.get('DBUSER', 'postgres')
-dbpass=os.environ.get('DBPASSWORD', 'postgres')
-dbname=os.environ.get('DBNAME', 'moviedb')
+from dotenv import load_dotenv
 
 st.write("## :orange[Movie Recommendations :cinema:]")
 
@@ -56,9 +51,11 @@ def get_review_summary(option, dbconn):
         with dbconn.cursor(cursor_factory = psycopg2.extras.RealDictCursor) as tcur:
             tcur.execute(qry, (option, ))
             result = tcur.fetchall()
-            return json.loads( result[0].get('invoke_model') )
+            if result:
+                return json.loads( result[0].get('invoke_model') )
+            return {'completion': ''}
 
-try:
+def main():
     df = load_data()
     option = st.selectbox('##### :orange[Select a movie you watched?]', df.title.unique())
     st.write('You have selected :orange[', option, ']')
@@ -89,5 +86,16 @@ try:
             write_columns_data(result)
         st.divider()
         
-except Exception as e:
-    print ("Error {}".format(e))
+if __name__ == '__main__':
+
+    # This function loads the environment variables from a .env file.
+    load_dotenv()
+
+    dbname=os.environ.get('DBNAME')
+    dbhost=os.environ.get('DBHOST')
+    dbuser=os.environ.get('DBUSER')
+    dbpass=os.environ.get('DBPASS')
+    dbport=os.environ.get('DBPORT')
+
+    main()
+
