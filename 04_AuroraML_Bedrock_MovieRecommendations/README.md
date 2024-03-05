@@ -78,45 +78,45 @@ To use the GenAI Q&A with pgvector and Amazon Aurora PostgreSQL App, follow thes
    CREATE DATABASE moviedb;
    \c moviedb
    \i data/movies.sql
+   
    ALTER TABLE movie.movies ADD COLUMN movie_embedding vector(1536);
+   
    DO $$
-   DECLARE 
-    r record; 
-    v vector(1536); 
-    v1 text ;
-    rcnt integer;
+      DECLARE 
+         r record; 
+         v vector(1536); 
+         v1 text;
+         rcnt integer;
    BEGIN
     FOR r IN SELECT id, 
-                title, overview, 
-                ARRAY_TO_STRING(keywords, ' ') keywords, 
-                ARRAY_TO_STRING(genre_id, ' ') genres, 
-                STRING_AGG(c->>'name', ' , ') credits
-            FROM movie.movies m CROSS JOIN jsonb_array_elements(credits) AS c
-            WHERE movie_embedding IS NULL
-             -- and id = 11 -- title: Star Wars
-            GROUP BY id, title, overview, ARRAY_TO_STRING(keywords, ' '),  ARRAY_TO_STRING(genre_id, ' ') 
+        title, overview, 
+        ARRAY_TO_STRING(keywords, ' ') keywords, 
+        ARRAY_TO_STRING(genre_id, ' ') genres, 
+        STRING_AGG(c->>'name', ' , ') credits
+    FROM movie.movies m CROSS JOIN JSONB_ARRAY_ELEMENTS(credits) AS c
+    WHERE movie_embedding is null  --and id not in (12230,252838)
+    group by id, title, overview, array_to_string(keywords, ' '),  array_to_string(genre_id, ' ') 
     LOOP
         RAISE NOTICE 'working on movie id %', r.id ;
-        v1 := replace(replace(replace(r.title||' '||r.overview||' '||r.keywords||' '||r.genres||' '||r.credits, chr(39), ''), '"', ''), '-', ' ') ;
+        v1 := regexp_replace(regexp_replace(replace(replace(replace(r.title||' '||r.overview||' '||r.keywords||' '||r.genres||' '||r.credits, chr(39), ''), '"', ''), '-', ' '), '[^[:ascii:]]', '', 'g'), '\s{2,}', ' ','g')  ;
         EXECUTE 'SELECT aws_bedrock.invoke_model_get_embeddings(
-         model_id      := ''amazon.titan-embed-text-v1'',
-         content_type  := ''application/json'',
-         json_key      := ''embedding'',
-         model_input   := ''{"inputText": "'|| v1 || '"}'')'
-            into v ;
-        UPDATE movie.movies set movie_embedding = v
+                    model_id      := ''amazon.titan-embed-text-v1'',
+                    content_type  := ''application/json'',
+                    json_key      := ''embedding'',
+                    model_input   := ''{"inputText": "'|| v1 || '"}'')'
+            INTO v ;
+        UPDATE movie.movies SET movie_embedding = v
         WHERE id = r.id ;
         rcnt := rcnt + 1;
-        IF rcnt >= 10 THEN
-            COMMIT;
-            rcnt := 0;
-        END IF;
+        COMMIT;
     END LOOP;
     COMMIT;
    END$$;
+
    CREATE INDEX ON movie.movies
       USING hnsw (movie_embedding vector_cosine_ops);
    ANALYZE movie.movies;
+   
    ```
 
 
