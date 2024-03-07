@@ -35,7 +35,7 @@ DECLARE
     r record; 
     v vector(1536); 
     v1 text ;
-    rcnt integer;
+    rcnt integer := 0;
 BEGIN
     FOR r IN SELECT id, 
                 title, overview, 
@@ -49,6 +49,8 @@ BEGIN
     LOOP
         RAISE NOTICE 'working on movie id %', r.id ;
         v1 := replace(replace(replace(r.title||' '||r.overview||' '||r.keywords||' '||r.genres||' '||r.credits, chr(39), ''), '"', ''), '-', ' ') ;
+	v1 := regexp_replace(v1, '\s\s+', ' ', 'g');
+
         EXECUTE $x$ 
         	SELECT aws_bedrock.invoke_model_get_embeddings(
          		model_id      := 'amazon.titan-embed-text-v1',
@@ -59,7 +61,7 @@ BEGIN
          		$x$
         INTO v 
         USING  '{"inputText": "'|| v1 ||'"}'::text ; 
-         
+
         UPDATE movie.movies set movie_embedding = v
         WHERE id = r.id ;
         rcnt := rcnt + 1;
