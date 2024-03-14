@@ -1,7 +1,7 @@
 # Import libraries
 from PyPDF2 import PdfReader
 from langchain_community.embeddings import BedrockEmbeddings
-from langchain_community.llms import Bedrock
+from langchain_community.chat_models import BedrockChat
 from langchain.schema import (
     AIMessage,
     HumanMessage
@@ -113,8 +113,8 @@ def main():
         with st.chat_message("Assistant"):
             stream_handler = StreamHandler(st.empty())
 
-            llm = Bedrock(model_id="anthropic.claude-v2:1", streaming=True, callbacks=[stream_handler], client=BEDROCK_CLIENT)
-            llm.model_kwargs = {"temperature": 0.5, "max_tokens_to_sample": 8191}
+            llm = BedrockChat(model_id="anthropic.claude-v2:1", streaming=True, callbacks=[stream_handler], client=BEDROCK_CLIENT)
+            llm.model_kwargs = {"temperature": 0.5, "max_tokens": 8191}
 
             general_system_template = """ 
             Human: "You are a helpful and talkative assistant that answers questions directly in only English and only using the information provided in the context below. 
