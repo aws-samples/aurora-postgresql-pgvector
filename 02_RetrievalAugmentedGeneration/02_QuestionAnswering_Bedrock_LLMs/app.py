@@ -55,7 +55,7 @@ def get_vectorstore(text_chunks):
 def get_conversation_chain(vectorstore):
     # Define model_id, client and model keyword arguments for Anthropic Claude v2
     llm = BedrockChat(model_id="anthropic.claude-v2:1", client=BEDROCK_CLIENT)
-    llm.model_kwargs = {"temperature": 0.5, "max_tokens_to_sample": 8191}
+    llm.model_kwargs = {"temperature": 0.5, "max_tokens": 8191}
     
     # The text that you give Claude is designed to elicit, or "prompt", a relevant output. A prompt is usually in the form of a question or instructions. When prompting Claude through the API, it is very important to use the correct `\n\nHuman:` and `\n\nAssistant:` formatting.
     # Claude was trained as a conversational agent using these special tokens to mark who is speaking. The `\n\nHuman:` (you) asks a question or gives instructions, and the`\n\nAssistant:` (Claude) responds.
