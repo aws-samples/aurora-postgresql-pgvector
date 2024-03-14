@@ -7,7 +7,7 @@ from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import BedrockEmbeddings
-from langchain_community.llms import Bedrock
+from langchain_community.chat_models import BedrockChat
 from langchain.prompts import PromptTemplate
 import streamlit as st
 import boto3
@@ -54,7 +54,7 @@ def get_vectorstore(text_chunks):
 # This chain allows the Gen AI app to engage in conversational interactions.
 def get_conversation_chain(vectorstore):
     # Define model_id, client and model keyword arguments for Anthropic Claude v2
-    llm = Bedrock(model_id="anthropic.claude-v2:1", client=BEDROCK_CLIENT)
+    llm = BedrockChat(model_id="anthropic.claude-v2:1", client=BEDROCK_CLIENT)
     llm.model_kwargs = {"temperature": 0.5, "max_tokens_to_sample": 8191}
     
     # The text that you give Claude is designed to elicit, or "prompt", a relevant output. A prompt is usually in the form of a question or instructions. When prompting Claude through the API, it is very important to use the correct `\n\nHuman:` and `\n\nAssistant:` formatting.
