@@ -86,18 +86,18 @@ def get_generate_embedding_func_sql():
         DECLARE
             doc RECORD;
             emb vector(1536);
-   			titan_model_input text;
+            titan_model_input text;
         BEGIN
             -- create embeddings for content column and save them in embedding column
             FOR doc in SELECT id, content FROM auroraml_chatbot
             LOOP
-			   SELECT format('{{ "inputText": "%s"}}', doc.content) INTO titan_model_input;
-			   SELECT * from aws_bedrock.invoke_model_get_embeddings(
-			      model_id      := '{0}',
-			      content_type  := 'application/json',
-			      json_key      := 'embedding',
-			      model_input   := titan_model_input)
-			   INTO emb;
+               SELECT format('{{ "inputText": "%s"}}', doc.content) INTO titan_model_input;
+               SELECT * from aws_bedrock.invoke_model_get_embeddings(
+                  model_id      := '{0}',
+                  content_type  := 'application/json',
+                  json_key      := 'embedding',
+                  model_input   := titan_model_input)
+               INTO emb;
                
                UPDATE auroraml_chatbot SET embedding = emb WHERE id = doc.id;
             END LOOP;
@@ -213,13 +213,12 @@ def generate_embeddings():
 
 # This function generates text for 'input text' using PostgreSQL generate_text function.
 def generate_text(input_text):
-    sql="SELECT generate_text('{0}')".format(input_text)
     completion = None
     
     try:
         conn = get_database_connection()
         with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-            cur.execute(sql)
+            cur.execute("SELECT generate_text(%s)", (input_text,))
             row = cur.fetchmany(1)
             if row:
                 response_body = row[0][0]
