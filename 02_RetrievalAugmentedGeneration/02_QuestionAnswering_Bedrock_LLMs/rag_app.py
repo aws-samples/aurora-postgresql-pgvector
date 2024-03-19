@@ -7,6 +7,7 @@ from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import BedrockEmbeddings
+from langchain_community.llms import Bedrock
 from langchain_community.chat_models import BedrockChat
 from langchain.prompts import PromptTemplate
 import streamlit as st

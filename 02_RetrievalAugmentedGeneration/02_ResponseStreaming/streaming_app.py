@@ -1,6 +1,7 @@
 # Import libraries
 from PyPDF2 import PdfReader
 from langchain_community.embeddings import BedrockEmbeddings
+from langchain_community.llms import Bedrock
 from langchain_community.chat_models import BedrockChat
 from langchain.schema import (
     AIMessage,
