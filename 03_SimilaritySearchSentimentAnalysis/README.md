@@ -1,4 +1,4 @@
-# Leverage pgvector and Amazon Aurora PostgreSQL for Natural Language Processing, Chatbots and Sentiment Analysis
+# Semantic Search and Sentiment Analysis using pgvector, Aurora PostgreSQL and Aurora Machine Learning (Aurora ML)
 
 ## Introduction - pgvector and Aurora Machine Learning for Sentiment Analysis
 
