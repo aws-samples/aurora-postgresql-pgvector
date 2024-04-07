@@ -1,6 +1,4 @@
-# Generative AI Use Cases with Amazon Aurora PostgreSQL ML (aws_ml), pgvector and Amazon Bedrock
-
-## Introduction - Build and deploy an AI-powered Movie Recommendations Application
+# Movie Recommendations using pgvector, Aurora PostgreSQL, Aurora ML and Amazon Bedrock
 
 In this lab, we provide a step-by-step guide with all the building blocks for creating an enterprise ready RAG application such as a Movie Recommendations. We use a combination of different AWS services including [Amazon Bedrock](https://aws.amazon.com/bedrock/), an easy way to build and scale generative AI applications with foundation models. We use [Titan Text](https://aws.amazon.com/bedrock/titan/) for text embeddings and [Anthropic's Claude on Amazon Bedrock](https://aws.amazon.com/bedrock/claude/) as our LLM, the pgvector extension on Amazon Aurora PostgreSQL-Compatible Edition as our vector database and Aurora ML for generating embeddings by invoking Amazon Bedrock LLMs from database context. 
 
