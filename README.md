@@ -23,4 +23,4 @@ This repository is intended for educational purposes and does not accept further
 
 ### License
 
-The use cases and sample code with pgvector and Amazon Aurora PostgreSQL-compatible edition is released under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html).
+The use cases and sample code with pgvector and Aurora PostgreSQL is released under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html).
