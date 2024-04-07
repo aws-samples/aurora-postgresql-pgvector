@@ -1,12 +1,13 @@
 # Building AI-powered search in PostgreSQL using Amazon SageMaker and pgvector
 
-This repository guides users through creating a product similarity search using Amazon SageMaker and Amazon Aurora for PostgreSQL using the extension `pgvector`.
+This repository contains sample code to create a product similarity search solution using Amazon SageMaker, Amazon Bedrock and Aurora PostgreSQL using the `pgvector` extension.
 
 # How does it work?
 
-we have used pre-trained model [`all-MiniLM-L6-v2`](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) from Hugging Face SentenceTransformers to generate fixed 384 length sentence embedding from feidegger, a zalandoresearch dataset. Then those feature vectors are stored in [Amazon Aurora for PostgreSQL](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.AuroraPostgreSQL.html) using extension `pgvector` for product similarity search.
+1. `genai-pgvector-similarity-search.ipynb`: We have used the pre-trained model [`all-MiniLM-L6-v2`](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) from Hugging Face SentenceTransformers to generate 384 dimensional text embeddings using the [Zalando Research dataset](https://github.com/zalandoresearch/feidegger) that consists of 8,732 high-resolution images. We then store those vector embeddings in Aurora PostgreSQL for product similarity search.
+2. `bedrock-text-search.ipynb`: We have used Amazon Titan Text or [`amazon.titan-embed-g1-text-02`](https://aws.amazon.com/bedrock/titan/) from Amazon Bedrock to generate 1536 dimensional text embeddings using a publicly available [dataset](https://www.kaggle.com/datasets/promptcloud/amazon-product-dataset-2020) that consists of 9000+ products from the Amazon product catalog.
 
-# Solution
+# Solution Architecture
 
 ![Architecture](static/architecture.png)
 
