@@ -1,4 +1,4 @@
-# Leverage pgvector and Amazon Aurora PostgreSQL for Natural Language Processing, Chatbots and Sentiment Analysis
+# Generative AI Use Cases with Amazon Aurora PostgreSQL, pgvector and Amazon Bedrock
 
 ## Introduction - Build and deploy an AI-powered chatbot application
 
