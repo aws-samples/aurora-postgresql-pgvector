@@ -1,4 +1,4 @@
-# Building AI-powered search in PostgreSQL using Amazon SageMaker and pgvector
+# Building a Product Recommendations Application using pgvector, Aurora PostgreSQL, Amazon SageMaker and Amazon Bedrock
 
 This repository contains sample code to create a product similarity search solution using Amazon SageMaker, Amazon Bedrock and Aurora PostgreSQL using the `pgvector` extension.
 
