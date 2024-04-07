@@ -19,8 +19,8 @@ This repository contains sample code demonstrating various use cases leveraging 
 
 ### Contributing
 
-This repository is intended for educational purposes and does not accept further contributions. Feel free to utilize and enhance the app based on your own requirements.
+This repository is intended for educational purposes and does not accept further contributions. Feel free to utilize and enhance the sample code based on your own requirements.
 
 ### License
 
-The The GenAI Q&A Chatbot with pgvector and Amazon Aurora PostgreSQL-compatible edition application is released under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html).
+The use cases and sample code with pgvector and Amazon Aurora PostgreSQL-compatible edition is released under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html).
