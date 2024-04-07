@@ -6,7 +6,7 @@ The GenAI Q&A Chatbot with pgvector and Amazon Aurora PostgreSQL-compatible edit
 
 ## Conceptual Flow Diagram
 
-![Architecture](static/APG-pgvector-streamlit.png)
+![Architecture](static/Streaming_Responses_RAG.png)
 
 ## How It Works
 
