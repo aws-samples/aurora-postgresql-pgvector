@@ -1,4 +1,4 @@
-#### Leverage pgvector and Amazon Aurora PostgreSQL for Natural Language Processing, Chatbots and Sentiment Analysis
+## Leverage pgvector and Amazon Aurora PostgreSQL for Natural Language Processing, Chatbots and Sentiment Analysis
 
 This repository contains sample code demonstrating various use cases leveraging pgvector on Amazon Aurora PostgreSQL-Compatible Edition, Amazon Bedrock and Generative AI. For more details, please refer to the following:
 
@@ -10,7 +10,7 @@ This repository contains sample code demonstrating various use cases leveraging 
 
 [pgvector](https://github.com/pgvector/pgvector) is an open-source PostgreSQL extension for vector similarity search. It’s designed to work seamlessly with other PostgreSQL features, including indexing and querying.
 
-## Use Cases
+### Use Cases
 1. Product Recommendations
 2. Retrieval Augmented Generation (RAG)
 3. Semantic Search and Sentiment Analysis
