@@ -100,7 +100,7 @@ def get_conversation_chain(vectorstore):
         combine_docs_chain_kwargs={'prompt': PROMPT}
     )
     
-    return conversation_chain
+    return conversation_chain.invoke
 
 # This function is responsible for processing the user's input question and generating a response from the chatbot
 def handle_userinput(user_question):
