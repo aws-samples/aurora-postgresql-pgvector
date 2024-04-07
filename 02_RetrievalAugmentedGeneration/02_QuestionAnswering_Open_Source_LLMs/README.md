@@ -1,4 +1,4 @@
-# Generative AI Use Cases with Amazon Aurora PostgreSQL, pgvector and Amazon Bedrock
+# Retrieval Augmented Generation (RAG) - Building a Question Answering application using pgvector, Aurora PostgreSQL and Hugging Face
 
 ## Introduction - Build and deploy an AI-powered chatbot application
 
