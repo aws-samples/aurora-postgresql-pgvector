@@ -1,12 +1,12 @@
-streamlit==1.24.0
+streamlit
 langchain
 langchain-community
 PyPDF2
 python-dotenv
-psycopg2-binary==2.9.6
-altair==4.0
+psycopg2-binary
+altair
 pgvector
 huggingface_hub
 InstructorEmbedding
-sentence-transformers==2.2.2
-urllib3==1.26.6
+sentence-transformers
+urllib3
