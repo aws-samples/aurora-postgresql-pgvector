@@ -55,8 +55,8 @@ def get_vectorstore(text_chunks):
 # This chain allows the Gen AI app to engage in conversational interactions.
 def get_conversation_chain(vectorstore):
     # Define model_id, client and model keyword arguments for Anthropic Claude v3
-    llm = BedrockChat(model_id="anthropic.claude-3-haiku-20240307-v1:0", client=BEDROCK_CLIENT)
-    llm.model_kwargs = {"temperature": 0.5, "max_tokens": 8191, "top_k": 500, "top_p": 1, "stop_sequences": ["\n\nHuman"],}
+    llm = BedrockChat(model_id="anthropic.claude-3-sonnet-20240229-v1:0", client=BEDROCK_CLIENT)
+    llm.model_kwargs = {"temperature": 0.5, "max_tokens": 8191}
     
     # The text that you give Claude is designed to elicit, or "prompt", a relevant output. A prompt is usually in the form of a question or instructions. When prompting Claude through the API, it is very important to use the correct `\n\nHuman:` and `\n\nAssistant:` formatting.
     # Claude was trained as a conversational agent using these special tokens to mark who is speaking. The `\n\nHuman:` (you) asks a question or gives instructions, and the`\n\nAssistant:` (Claude) responds.
