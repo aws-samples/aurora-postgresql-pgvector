@@ -3,7 +3,7 @@
 This repository contains sample code demonstrating various use cases leveraging pgvector on Amazon Aurora PostgreSQL-Compatible Edition, Amazon Bedrock and Generative AI. For more details, please refer to the following:
 
 1. AWS blog post: [Leverage pgvector and Amazon Aurora PostgreSQL for Natural Language Processing, Chatbots and Sentiment Analysis](https://aws.amazon.com/blogs/database/leverage-pgvector-and-amazon-aurora-postgresql-for-natural-language-processing-chatbots-and-sentiment-analysis/).
-2. AWS Workshop: [Generative AI Use Cases with Aurora PostgreSQL and pgvector](https://catalog.workshops.aws/pgvector/en-US)
+2. AWS Workshop: [Generative AI Use Cases with Aurora PostgreSQL and pgvector](https://catalog.workshops.aws/pgvector/en-US).
 
 
 ### What is pgvector?
