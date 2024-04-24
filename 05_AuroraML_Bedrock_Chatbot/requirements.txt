@@ -1,0 +1,8 @@
+boto3
+jq
+langchain
+langchain-community
+psycopg2-binary
+pypdf
+streamlit
+unstructured
