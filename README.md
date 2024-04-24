@@ -1,25 +1,26 @@
-## Leverage pgvector and Amazon Aurora PostgreSQL for Natural Language Processing, Chatbots and Sentiment Analysis
+# Generative AI use cases with pgvector, Aurora PostgreSQL and Amazon Bedrock
 
-This repository is associated with the AWS blog post: [Leverage pgvector and Amazon Aurora PostgreSQL for Natural Language Processing, Chatbots and Sentiment Analysis](https://aws.amazon.com/blogs/database/leverage-pgvector-and-amazon-aurora-postgresql-for-natural-language-processing-chatbots-and-sentiment-analysis/).
+This repository contains sample code demonstrating various use cases leveraging pgvector on Amazon Aurora PostgreSQL-Compatible Edition, Amazon Bedrock and Generative AI. For more details, please refer to the following:
 
-## What is pgvector?
+1. AWS blog post: [Leverage pgvector and Amazon Aurora PostgreSQL for Natural Language Processing, Chatbots and Sentiment Analysis](https://aws.amazon.com/blogs/database/leverage-pgvector-and-amazon-aurora-postgresql-for-natural-language-processing-chatbots-and-sentiment-analysis/).
+2. AWS Workshop: [Generative AI Use Cases with Aurora PostgreSQL and pgvector](https://catalog.workshops.aws/pgvector/en-US).
 
-pgvector is an open-source extension designed to augment PostgreSQL databases with the capability to store and conduct searches on ML-generated embeddings to identify both exact and approximate nearest neighbors. It’s designed to work seamlessly with other PostgreSQL features, including indexing and querying.
 
-Please review the pgvector [documentation](https://github.com/pgvector/pgvector) for additional details.
+### What is pgvector?
 
-To generate vector embeddings, you can use popular open-source frameworks such as LangChain and HuggingFace. [Hugging Face Hub](https://huggingface.co/docs/hub/index) is a platform with over 120k models, 20k datasets, and 50k demo apps, all open source and publicly available, in an online platform where people can easily collaborate and build ML together.
+[pgvector](https://github.com/pgvector/pgvector) is an open-source PostgreSQL extension for vector similarity search. It’s designed to work seamlessly with other PostgreSQL features, including indexing and querying.
 
-For this blog post, we explore two use cases in the context of pgvector and [Amazon Aurora PostgreSQL-Compatible Edition](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.AuroraPostgreSQL.html):
+### Use Cases
+1. Product Recommendations
+2. Retrieval Augmented Generation (RAG)
+3. Semantic Search and Sentiment Analysis
+4. Knowledge Bases for Amazon Bedrock with Aurora PostgreSQL
+5. Movie Recommendations using Aurora ML and Amazon Bedrock
 
-1. First, we build an AI-powered application that lets you ask questions based on content in your PDF files in natural language. We upload PDF files to the application and then type in questions in simple English. Our AI-powered application will process questions and return answers based on the content of the PDF files.
+### Contributing
 
-2. Next, we make use of the native integration between pgvector and Amazon Aurora Machine Learning. Machine learning integration with Aurora currently supports Amazon Comprehend and Amazon SageMaker. Aurora makes direct and secure calls to SageMaker and Comprehend that don’t go through the application layer. Aurora machine learning is based on the familiar SQL programming language, so you don’t need to build custom integrations, move data around or learn separate tools.
+This repository is intended for educational purposes and does not accept further contributions. Feel free to utilize and enhance the sample code based on your own requirements.
 
-## Contributing
+### License
 
-This repository is intended for educational purposes and does not accept further contributions. Feel free to utilize and enhance the app based on your own requirements.
-
-## License
-
-The The GenAI Q&A Chatbot with pgvector and Amazon Aurora PostgreSQL-compatible edition application is released under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html).
+The use cases and sample code with pgvector and Aurora PostgreSQL is released under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html).

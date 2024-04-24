@@ -1,6 +1,4 @@
-# Generative AI Use Cases with Amazon Aurora PostgreSQL, pgvector and Amazon Bedrock
-
-## Introduction - Build and deploy an AI-powered chatbot application
+# Retrieval Augmented Generation (RAG) - Building a Question Answering application using pgvector, Aurora PostgreSQL and Amazon Bedrock
 
 In this lab, we provide a step-by-step guide with all the building blocks for creating an enterprise ready RAG application such as a question answering chatbot. We use a combination of different AWS services including [Amazon Bedrock](https://aws.amazon.com/bedrock/), an easy way to build and scale generative AI applications with foundation models. We use [Titan Text](https://aws.amazon.com/bedrock/titan/) for text embeddings and [Anthropic's Claude on Amazon Bedrock](https://aws.amazon.com/bedrock/claude/) as our LLM and the pgvector extension on Amazon Aurora PostgreSQL-Compatible Edition as our vector database. We also demonstrate integration with open-source frameworks such as LangChain for interfacing with all the components and Streamlit for building the chatbot frontend.
 

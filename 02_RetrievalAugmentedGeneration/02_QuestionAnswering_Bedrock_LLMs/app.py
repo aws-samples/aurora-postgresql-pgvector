@@ -54,8 +54,8 @@ def get_vectorstore(text_chunks):
 # Here, a conversation chain is created using the conversational AI model (Anthropic's Claude v2), vector store (created in the previous function), and conversation memory (ConversationSummaryBufferMemory). 
 # This chain allows the Gen AI app to engage in conversational interactions.
 def get_conversation_chain(vectorstore):
-    # Define model_id, client and model keyword arguments for Anthropic Claude v2
-    llm = BedrockChat(model_id="anthropic.claude-v2:1", client=BEDROCK_CLIENT)
+    # Define model_id, client and model keyword arguments for Anthropic Claude v3
+    llm = BedrockChat(model_id="anthropic.claude-3-sonnet-20240229-v1:0", client=BEDROCK_CLIENT)
     llm.model_kwargs = {"temperature": 0.5, "max_tokens": 8191}
     
     # The text that you give Claude is designed to elicit, or "prompt", a relevant output. A prompt is usually in the form of a question or instructions. When prompting Claude through the API, it is very important to use the correct `\n\nHuman:` and `\n\nAssistant:` formatting.
@@ -100,7 +100,7 @@ def get_conversation_chain(vectorstore):
         combine_docs_chain_kwargs={'prompt': PROMPT}
     )
     
-    return conversation_chain
+    return conversation_chain.invoke
 
 # This function is responsible for processing the user's input question and generating a response from the chatbot
 def handle_userinput(user_question):

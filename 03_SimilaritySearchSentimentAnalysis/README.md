@@ -1,6 +1,4 @@
-# Leverage pgvector and Amazon Aurora PostgreSQL for Natural Language Processing, Chatbots and Sentiment Analysis
-
-## Introduction - pgvector and Aurora Machine Learning for Sentiment Analysis
+# Semantic Search and Sentiment Analysis using pgvector, Aurora PostgreSQL and Aurora Machine Learning (Aurora ML)
 
 [Amazon Comprehend](https://aws.amazon.com/comprehend/) is a natural language processing (NLP) service that uses machine learning to find insights and relationships in text. No prior machine learning experience is required. This example will walk you through the process of integrating Amazon Aurora PostgreSQL-Compatible Edition with the Comprehend Sentiment Analysis API and making sentiment analysis inferences via SQL commands. For our example, we have used a sample dataset with data for Fictitious Hotel Reviews.
 
