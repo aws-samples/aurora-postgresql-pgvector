@@ -1,7 +1,8 @@
 # Import libraries
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
-from langchain.vectorstores.pgvector import PGVector
+from langchain_postgres import PGVector
+from langchain_postgres.vectorstores import PGVector
 from langchain.memory import ConversationSummaryBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css
@@ -9,7 +10,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import BedrockEmbeddings
 from langchain_community.llms import Bedrock
 from langchain_community.chat_models import BedrockChat
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 import streamlit as st
 import boto3
 from PIL import Image
