@@ -1,6 +1,6 @@
 streamlit
 langchain
-langchain>=0.0.350
+langchain-postgres
 PyPDF2
 python-dotenv
 altair
