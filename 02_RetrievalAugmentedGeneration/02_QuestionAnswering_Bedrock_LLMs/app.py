@@ -1,7 +1,8 @@
 # Import libraries
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
-from langchain.vectorstores.pgvector import PGVector
+from langchain_postgres import PGVector
+from langchain_postgres.vectorstores import PGVector
 from langchain.memory import ConversationSummaryBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css
@@ -9,7 +10,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import BedrockEmbeddings
 from langchain_community.llms import Bedrock
 from langchain_community.chat_models import BedrockChat
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 import streamlit as st
 import boto3
 from PIL import Image
@@ -43,13 +44,14 @@ def get_text_chunks(text):
 # The vector store stores the vector representations of the text chunks, enabling efficient retrieval based on semantic similarity.
 def get_vectorstore(text_chunks):
     # Create the Titan embeddings
-    embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-text-v1", client=BEDROCK_CLIENT)
+    embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-text-v2:0", client=BEDROCK_CLIENT)
     if text_chunks is None:
         return PGVector(
-            connection_string=CONNECTION_STRING,
-            embedding_function=embeddings,
+            connection=connection,
+            embeddings=embeddings,
+            use_jsonb=True
         )
-    return PGVector.from_texts(texts=text_chunks, embedding=embeddings, connection_string=CONNECTION_STRING)
+    return PGVector.from_texts(texts=text_chunks, embedding=embeddings, connection=connection)
         
 # Here, a conversation chain is created using the conversational AI model (Anthropic's Claude v2), vector store (created in the previous function), and conversation memory (ConversationSummaryBufferMemory). 
 # This chain allows the Gen AI app to engage in conversational interactions.
@@ -221,14 +223,7 @@ if __name__ == '__main__':
     # Define the Bedrock client.
     BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-west-2')
     
-    # Create the connection string for pgvector from .env file.
-    CONNECTION_STRING = PGVector.connection_string_from_db_params(                                                  
-        driver = os.environ.get("PGVECTOR_DRIVER"),
-        user = os.environ.get("PGVECTOR_USER"),                                      
-        password = os.environ.get("PGVECTOR_PASSWORD"),                                  
-        host = os.environ.get("PGVECTOR_HOST"),                                            
-        port = os.environ.get("PGVECTOR_PORT"),                                          
-        database = os.environ.get("PGVECTOR_DATABASE")                                       
-    )  
+    # Create the connection string for pgvector. Ref: https://github.com/langchain-ai/langchain-postgres/blob/main/examples/vectorstore.ipynb
+    connection = "postgresql+psycopg://postgres:<enter your password>@<enter your Aurora PG cluster>:5432/<enter your DB name>"
 
     main()
