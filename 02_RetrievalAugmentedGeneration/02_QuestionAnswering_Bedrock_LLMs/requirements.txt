@@ -3,7 +3,6 @@ langchain
 langchain-community
 PyPDF2
 python-dotenv
-psycopg2-binary
 altair
 urllib3
 boto3
