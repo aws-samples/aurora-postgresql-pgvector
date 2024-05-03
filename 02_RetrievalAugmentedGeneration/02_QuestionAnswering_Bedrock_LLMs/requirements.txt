@@ -5,9 +5,10 @@ PyPDF2
 python-dotenv
 psycopg2-binary
 altair
-pgvector
 urllib3
 boto3
 awscli
 botocore
 anthropic
+langchain-postgres
+langchain-aws
