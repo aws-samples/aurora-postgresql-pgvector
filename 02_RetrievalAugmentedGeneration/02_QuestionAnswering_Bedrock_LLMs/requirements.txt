@@ -1,6 +1,9 @@
 streamlit
 langchain
 langchain-community
+langchain-core
+langchain-postgres
+langchain-aws
 PyPDF2
 python-dotenv
 altair
@@ -9,5 +12,3 @@ boto3
 awscli
 botocore
 anthropic
-langchain-postgres
-langchain-aws
