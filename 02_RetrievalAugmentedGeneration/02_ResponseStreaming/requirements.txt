@@ -1,11 +1,12 @@
 streamlit
 langchain
 langchain-community
+langchain-core
+langchain-postgres
+langchain-aws
 PyPDF2
 python-dotenv
-psycopg2-binary
 altair
-pgvector
 urllib3
 boto3
 awscli
