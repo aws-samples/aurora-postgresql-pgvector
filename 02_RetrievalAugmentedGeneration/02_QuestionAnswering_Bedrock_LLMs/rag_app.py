@@ -8,8 +8,7 @@ from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import BedrockEmbeddings
-from langchain_community.llms import Bedrock
-from langchain_community.chat_models import BedrockChat
+from langchain_aws import ChatBedrock
 from langchain_core.prompts import PromptTemplate
 import streamlit as st
 import boto3
@@ -158,6 +157,6 @@ if __name__ == '__main__':
     BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-west-2')
     
     # Create the connection string for pgvector. Ref: https://github.com/langchain-ai/langchain-postgres/blob/main/examples/vectorstore.ipynb
-    connection = "postgresql+psycopg://<user name>:<enter your password>@<enter your Aurora PG cluster>:5432/<enter your DB name>"
+    connection = "postgresql+psycopg://<username>:<password>@<DB Host>:5432/<DB Name>"
 
     main()
