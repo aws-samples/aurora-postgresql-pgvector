@@ -1,16 +1,16 @@
 # Import libraries
 from PyPDF2 import PdfReader
 from langchain_community.embeddings import BedrockEmbeddings
-from langchain_community.llms import Bedrock
-from langchain_community.chat_models import BedrockChat
+from langchain_aws import ChatBedrock
 from langchain.schema import (
     AIMessage,
     HumanMessage
 )
-from langchain.prompts import ChatPromptTemplate
-from langchain.prompts import SystemMessagePromptTemplate
-from langchain.prompts import HumanMessagePromptTemplate
-from langchain.vectorstores.pgvector import PGVector
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import SystemMessagePromptTemplate
+from langchain_core.prompts import HumanMessagePromptTemplate
+from langchain_postgres import PGVector
+from langchain_postgres.vectorstores import PGVector
 from langchain.chains import ConversationalRetrievalChain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.callbacks.base import BaseCallbackHandler
@@ -59,10 +59,11 @@ class StreamHandler(BaseCallbackHandler):
 def get_vectorstore(text_chunks):
     if text_chunks is None:
         return PGVector(
-            connection_string=CONNECTION_STRING,
-            embedding_function=embeddings,
+            connection=connection,
+            embeddings=embeddings,
+            use_jsonb=True
         )
-    return PGVector.from_texts(texts=text_chunks, embedding=embeddings, connection_string=CONNECTION_STRING)
+    return PGVector.from_texts(texts=text_chunks, embedding=embeddings, connection=connection)
 
 def main():
     # Set the page configuration for the Streamlit application, including the page title and icon.
@@ -114,7 +115,7 @@ def main():
         with st.chat_message("Assistant"):
             stream_handler = StreamHandler(st.empty())
 
-            llm = BedrockChat(model_id="anthropic.claude-3-sonnet-20240229-v1:0", streaming=True, callbacks=[stream_handler], client=BEDROCK_CLIENT)
+            llm = ChatBedrock(model_id="anthropic.claude-3-haiku-20240307-v1:0", streaming=True, callbacks=[stream_handler], client=BEDROCK_CLIENT)
             llm.model_kwargs = {"temperature": 0.5, "max_tokens": 8191}
 
             general_system_template = """ 
@@ -195,16 +196,9 @@ if __name__ == '__main__':
     BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-west-2')
     
     # Define the Embedding model using the Bedrock client
-    embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-text-v1", client=BEDROCK_CLIENT)
+    embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-text-v2:0", client=BEDROCK_CLIENT)
     
-    # Create the connection string for pgvector from .env file.
-    CONNECTION_STRING = PGVector.connection_string_from_db_params(                                                  
-        driver = os.environ.get("PGVECTOR_DRIVER"),
-        user = os.environ.get("PGVECTOR_USER"),                                      
-        password = os.environ.get("PGVECTOR_PASSWORD"),                                  
-        host = os.environ.get("PGVECTOR_HOST"),                                            
-        port = os.environ.get("PGVECTOR_PORT"),                                          
-        database = os.environ.get("PGVECTOR_DATABASE")                                       
-    )
+    # Create the connection string for pgvector. Ref: https://github.com/langchain-ai/langchain-postgres/blob/main/examples/vectorstore.ipynb
+    connection = "postgresql+psycopg://<username>:<password>@<DB host>:5432/<DB name>"
 
 main()
