@@ -1,25 +1,20 @@
 # Import libraries
-from PyPDF2 import PdfReader
-from langchain_community.embeddings import BedrockEmbeddings
-from langchain_community.llms import Bedrock
-from langchain_community.chat_models import BedrockChat
-from langchain.schema import (
-    AIMessage,
-    HumanMessage
-)
-from langchain.prompts import ChatPromptTemplate
-from langchain.prompts import SystemMessagePromptTemplate
-from langchain.prompts import HumanMessagePromptTemplate
-from langchain.vectorstores.pgvector import PGVector
-from langchain.chains import ConversationalRetrievalChain
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.callbacks.base import BaseCallbackHandler
-from langchain.schema import ChatMessage
-import streamlit as st
 from dotenv import load_dotenv
+from PyPDF2 import PdfReader
+from langchain_postgres import PGVector
+from langchain_postgres.vectorstores import PGVector
+from langchain.memory import ConversationSummaryBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+from htmlTemplates import css
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.embeddings import BedrockEmbeddings
+from langchain_aws import ChatBedrock
+from langchain_core.prompts import PromptTemplate
+import streamlit as st
+import boto3
 from PIL import Image
 import os
-import boto3
+import traceback
 
 # This function takes a list of PDF documents as input and extracts the text from them using PdfReader. 
 # It concatenates the extracted text and returns it.
@@ -36,39 +31,109 @@ def get_pdf_text(pdf_docs):
 def get_text_chunks(text):
     text_splitter = RecursiveCharacterTextSplitter(
         separators=["\n\n", "\n", ".", " "],
-        chunk_size=1000,
-        chunk_overlap=200,
+        chunk_size=1000, 
+        chunk_overlap=200, 
         length_function=len
      )
 
     chunks = text_splitter.split_text(text)
     return chunks
 
-# Create a custom handler and pass a streamlit container to it. This is required for response streaming.
-class StreamHandler(BaseCallbackHandler):
-    def __init__(self, container, initial_text=""):
-        self.container = container
-        self.text = initial_text
-
-    def on_llm_new_token(self, token: str, **kwargs) -> None:
-        self.text += token
-        self.container.markdown(self.text)
-
 # This function takes the text chunks as input and creates a vector store using Bedrock Embeddings (Titan) and pgvector. 
 # The vector store stores the vector representations of the text chunks, enabling efficient retrieval based on semantic similarity.
 def get_vectorstore(text_chunks):
+    # Create the Titan embeddings
+    embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-text-v2:0", client=BEDROCK_CLIENT)
     if text_chunks is None:
         return PGVector(
-            connection_string=CONNECTION_STRING,
-            embedding_function=embeddings,
+            connection=connection,
+            embeddings=embeddings,
+            use_jsonb=True
         )
-    return PGVector.from_texts(texts=text_chunks, embedding=embeddings, connection_string=CONNECTION_STRING)
+    return PGVector.from_texts(texts=text_chunks, embedding=embeddings, connection=connection)
+        
+# Here, a conversation chain is created using the conversational AI model (Anthropic's Claude v2), vector store (created in the previous function), and conversation memory (ConversationSummaryBufferMemory). 
+# This chain allows the Gen AI app to engage in conversational interactions.
+def get_conversation_chain(vectorstore):
+    # Define model_id, client and model keyword arguments for Anthropic Claude v3
+    llm = ChatBedrock(model_id="anthropic.claude-3-sonnet-20240229-v1:0", client=BEDROCK_CLIENT)
+    llm.model_kwargs = {"temperature": 0.5, "max_tokens": 8191}
+    
+    # The text that you give Claude is designed to elicit, or "prompt", a relevant output. A prompt is usually in the form of a question or instructions. When prompting Claude through the API, it is very important to use the correct `\n\nHuman:` and `\n\nAssistant:` formatting.
+    # Claude was trained as a conversational agent using these special tokens to mark who is speaking. The `\n\nHuman:` (you) asks a question or gives instructions, and the`\n\nAssistant:` (Claude) responds.
+    prompt_template = """Human: You are a helpful assistant that answers questions directly and only using the information provided in the context below. 
+    Guidance for answers:
+        - Always use English as the language in your responses.
+        - In your answers, always use a professional tone.
+        - Begin your answers with "Based on the context provided: "
+        - Simply answer the question clearly and with lots of detail using only the relevant details from the information below. If the context does not contain the answer, say "Sorry, I didn't understand that. Could you rephrase your question?"
+        - Use bullet-points and provide as much detail as possible in your answer. 
+        - Always provide a summary at the end of your answer.
+        
+    Now read this context below and answer the question at the bottom.
+    
+    Context: {context}
+
+    Question: {question}
+    
+    Assistant:"""
+
+    PROMPT = PromptTemplate(
+        template=prompt_template, input_variables=["context", "question"]
+    )
+    
+    memory = ConversationSummaryBufferMemory(
+        llm=llm,
+        memory_key='chat_history',
+        return_messages=True,
+        ai_prefix="Assistant",
+        output_key='answer')
+    
+    conversation_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        chain_type="stuff",
+        return_source_documents=True,
+        retriever=vectorstore.as_retriever(
+            search_type="similarity",
+            search_kwargs={"k": 3, "include_metadata": True}),
+        get_chat_history=lambda h : h,
+        memory=memory,
+        combine_docs_chain_kwargs={'prompt': PROMPT}
+    )
+    
+    return conversation_chain.invoke
+
+# This function is responsible for processing the user's input question and generating a response from the chatbot
+def handle_userinput(user_question):
+    
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = None
+    
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+        
+    try:
+        response = st.session_state.conversation({'question': user_question})
+        
+    except ValueError:
+        st.write("Sorry, I didn't understand that. Could you rephrase your question?")
+        print(traceback.format_exc())
+        return
+
+    st.session_state.chat_history = response['chat_history']
+
+    for i, message in enumerate(st.session_state.chat_history):
+        if i % 2 == 0:
+            st.success(message.content, icon="🤔")
+        else:
+            st.write(message.content)
 
 def main():
     # Set the page configuration for the Streamlit application, including the page title and icon.
-    st.set_page_config(page_title="Streamlit Question Answering App",
+    st.set_page_config(page_title="Generative AI Q&A with Amazon Bedrock, Aurora PostgreSQL and pgvector",
                        layout="wide",
                        page_icon=":books::parrot:")
+    st.write(css, unsafe_allow_html=True)
 
     logo_url = "static/Powered-By_logo-stack_RGB_REV.png"
     st.sidebar.image(logo_url, width=150)
@@ -80,82 +145,39 @@ def main():
     2. Click Process
     3. Type your question in the search bar to get more insights
     """
-)
-    # Check if the vectorDB and messages are not present in the session state and initialize them to None.
-    if "vectorDB" not in st.session_state:
-        st.session_state.vectorDB = get_vectorstore(None)
-
-    if "messages" not in st.session_state:
-        st.session_state["messages"] = []
+    )
+    
+    # Check if the conversation and chat history are not present in the session state and initialize them to None.
+    if "conversation" not in st.session_state:
+        st.session_state.conversation = get_conversation_chain(get_vectorstore(None))
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = None
     
     # A header with the text appears at the top of the Streamlit application.
-    st.header("Generative AI Streaming Chat with Amazon Bedrock, Aurora PostgreSQL and pgvector :books::parrot:")
+    st.header("Generative AI Q&A with Amazon Bedrock, Aurora PostgreSQL and pgvector :books::parrot:")
     subheader = '<p style="font-family:Calibri (Body); color:Grey; font-size: 16px;">Leverage Foundational Models from <a href="https://aws.amazon.com/bedrock/">Amazon Bedrock</a> and <a href="https://github.com/pgvector/pgvector">pgvector</a> as Vector Engine</p>'
     
     # Write the CSS style to the Streamlit application, allowing you to customize the appearance.
     st.markdown(subheader, unsafe_allow_html=True)
-    st.image(Image.open("static/Streaming_Responses_RAG.png"))
+    image = Image.open("static/RAG_APG.png")
+    st.image(image, caption='Generative AI Q&A with Amazon Bedrock, Aurora PostgreSQL and pgvector')
     
-    # A chat message can be associated with an AI assistant, a human or a system role. Here we are displaying the question (asked by the human) and the response (answered by the AI assistant) alternately.
-    for msg in st.session_state.messages:
-        if msg.type == "human":
-            st.chat_message("Human: ").write(msg.content)
-        if msg.type == "ai":
-            st.chat_message("Assistant: ").write(msg.content)
-
-    # The text that you give Claude is designed to elicit, or "prompt", a relevant output. A prompt is usually in the form of a question or instructions. 
-    # When prompting Claude through the API, it is very important to use the correct \n\nHuman: and \n\nAssistant: formatting.
-    # Claude was trained as a conversational agent using these special tokens to mark who is speaking. 
-    # The \n\nHuman: (you) asks a question or gives instructions, and the\n\nAssistant: (Claude) responds.
-    prompt = st.chat_input("Your question")
-    if prompt:
-        st.chat_message("user").write(prompt)
-        st.session_state.messages.append(ChatMessage(role="user", content=prompt))
-        with st.chat_message("Assistant"):
-            stream_handler = StreamHandler(st.empty())
-
-            llm = BedrockChat(model_id="anthropic.claude-3-sonnet-20240229-v1:0", streaming=True, callbacks=[stream_handler], client=BEDROCK_CLIENT)
-            llm.model_kwargs = {"temperature": 0.5, "max_tokens": 8191}
-
-            general_system_template = """ 
-            Human: "You are a helpful and talkative assistant that answers questions directly in only English and only using the information provided in the context below. 
-            Guidance for answers:
-                - In your answers, always use a professional tone.
-                - Begin your answers with "Based on the context provided: "
-                - Simply answer the question clearly and with lots of detail using only the relevant details from the information below. If the context does not contain the answer, say "I don't know."
-                - Use bullet-points and provide as much detail as possible in your answer. 
-                - Always provide a summary at the end of your answer.
-            ----
-            {context}
-            ----
-
-            Assistant: """
-                
-            general_user_template = "Question:```{question}```"
-
-            messages = [
-                SystemMessagePromptTemplate.from_template(general_system_template),
-                HumanMessagePromptTemplate.from_template(general_user_template)
-            ]
-                
-            qa_prompt = ChatPromptTemplate.from_messages(messages)
-
-            conversation_chain = ConversationalRetrievalChain.from_llm(
-                llm=llm,
-                chain_type="stuff",
-                combine_docs_chain_kwargs={"prompt": qa_prompt},
-                retriever=st.session_state.vectorDB.as_retriever(search_kwargs={"k": 1}),
-            )
-                
-            response = conversation_chain.invoke({'question': prompt, 'chat_history':st.session_state.messages})
-
-            st.session_state.messages = st.session_state.messages + [HumanMessage(content = response["question"]), AIMessage(content = response["answer"])]
+    # Create a text input box where you can ask questions about your documents.
+    user_question = st.text_input("Ask a question about your documents:", placeholder="What is Amazon Aurora?")
     
+    # Define a Go button for user action
+    go_button = st.button("Submit", type="secondary")
+    
+    # If the go button is pressed or the user enters a question, it calls the handle_userinput() function to process the user's input.
+    if go_button or user_question:
+        with st.spinner("Processing..."):
+            handle_userinput(user_question)
+
     with st.sidebar:
         st.subheader("Your documents")
         pdf_docs = st.file_uploader(
             "Upload your PDFs here and click on 'Process'", type="pdf", accept_multiple_files=True)
-       
+        
         # If the user clicks the "Process" button, the following code is executed:
         # i. raw_text = get_pdf_text(pdf_docs): retrieves the text content from the uploaded PDF documents.
         # ii. text_chunks = get_text_chunks(raw_text): splits the text content into smaller chunks for efficient processing.
@@ -169,42 +191,38 @@ def main():
                 text_chunks = get_text_chunks(raw_text)
 
                 # create vector store
-                st.session_state.vectorDB = get_vectorstore(text_chunks)
+                vectorstore = get_vectorstore(text_chunks)
+
+                # create conversation chain
+                st.session_state.conversation = get_conversation_chain(vectorstore)
 
                 st.success('PDF uploaded successfully!', icon="✅")
-        
-        with st.sidebar:
-            st.divider()
+    
+    with st.sidebar:
+        st.divider()
 
-        st.sidebar.markdown(
-        """
-        ### Sample questions to get started:
-        1. How has AWS evolved over time?
-        2. How has Amazon managed to make AWS so successful?
-        3. What business challenges has Amazon had to overcome?
-        4. How was Amazon impacted by COVID-19?
-        5. What is Amazon's AI strategy?
-        """
-        )
+    st.sidebar.markdown(
+    """
+    ### Sample questions to get started:
+    1. What is Amazon Aurora?
+    2. How can I migrate from PostgreSQL to Aurora and the other way around?
+    3. What does "three times the performance of PostgreSQL" mean?
+    4. What is Aurora Standard and Aurora I/O-Optimized?
+    5. How do I scale the compute resources associated with my Amazon Aurora DB Instance?
+    6. How does Amazon Aurora improve my databases fault tolerance to disk failures?
+    7. How does Aurora improve recovery time after a database crash?
+    8. How can I improve upon the availability of a single Amazon Aurora database?
+    """
+)
 
 if __name__ == '__main__':
     # This function loads the environment variables from a .env file.
     load_dotenv()
     
-    # Define the Bedrock client
+    # Define the Bedrock client.
     BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-west-2')
     
-    # Define the Embedding model using the Bedrock client
-    embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-text-v1", client=BEDROCK_CLIENT)
-    
-    # Create the connection string for pgvector from .env file.
-    CONNECTION_STRING = PGVector.connection_string_from_db_params(                                                  
-        driver = os.environ.get("PGVECTOR_DRIVER"),
-        user = os.environ.get("PGVECTOR_USER"),                                      
-        password = os.environ.get("PGVECTOR_PASSWORD"),                                  
-        host = os.environ.get("PGVECTOR_HOST"),                                            
-        port = os.environ.get("PGVECTOR_PORT"),                                          
-        database = os.environ.get("PGVECTOR_DATABASE")                                       
-    )
+    # Create the connection string for pgvector. Ref: https://github.com/langchain-ai/langchain-postgres/blob/main/examples/vectorstore.ipynb
+    connection = "postgresql+psycopg://<username>:<password>@<DB host>:5432/<DB name>"
 
-main()
+    main()
