@@ -46,11 +46,6 @@ function clone_git()
     rm -rf ${PROJ_NAME}
     git clone ${GITHUB_URL}${PROJ_NAME}
     cd ${PROJ_NAME}
-    rm -rf 01_ProductRecommendations
-    rm -rf 02_RetrievalAugmentedGeneration
-    rm -rf 03_SimilaritySearchSentimentAnalysis
-    rm -rf 04_AuroraML_Bedrock_MovieRecommendations
-    rm -rf 05_AuroraML_Bedrock_Chatbot
     print_line
 }
 
