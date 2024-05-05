@@ -171,16 +171,9 @@ if __name__ == '__main__':
     BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-west-2')
     
     # Define the Embedding model using the Bedrock client
-    embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-text-v1", client=BEDROCK_CLIENT)
+    embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-text-v2:0", client=BEDROCK_CLIENT)
     
-    # Create the connection string for pgvector from .env file.
-    CONNECTION_STRING = PGVector.connection_string_from_db_params(                                                  
-        driver = os.environ.get("PGVECTOR_DRIVER"),
-        user = os.environ.get("PGVECTOR_USER"),                                      
-        password = os.environ.get("PGVECTOR_PASSWORD"),                                  
-        host = os.environ.get("PGVECTOR_HOST"),                                            
-        port = os.environ.get("PGVECTOR_PORT"),                                          
-        database = os.environ.get("PGVECTOR_DATABASE")                                       
-    )
+    # Create the connection string for pgvector. Ref: https://github.com/langchain-ai/langchain-postgres/blob/main/examples/vectorstore.ipynb
+    connection = "postgresql+psycopg://<username>:<password>@<DB host>:5432/<DB name>"
 
 main()
