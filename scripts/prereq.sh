@@ -98,7 +98,7 @@ function install_extension()
     psql -h ${PGHOST} -c "create extension if not exists vector"
 }
 
-function install_python39()
+function install_python311()
 {
     # Install Python 3.11
     sudo yum remove -y openssl-devel > ${TERM} 2>&1
@@ -180,7 +180,7 @@ function check_installation()
     fi
 
     # Checking Streamlit
-    streamlit --version | grep Streamlit > /dev/null 2>&1
+    streamlit --version | grep streamlit > /dev/null 2>&1
     if [ $? -eq 0 ] ; then
         echo "Streamlit installation successful : OK"
     else
@@ -237,7 +237,7 @@ install_extension
 print_line
 install_c9
 print_line
-install_python39
+install_python311
 install_requirements
 print_line
 check_installation
