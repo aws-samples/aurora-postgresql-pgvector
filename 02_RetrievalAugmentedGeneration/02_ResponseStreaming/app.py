@@ -199,6 +199,14 @@ if __name__ == '__main__':
     embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-text-v2:0", client=BEDROCK_CLIENT)
     
     # Create the connection string for pgvector. Ref: https://github.com/langchain-ai/langchain-postgres/blob/main/examples/vectorstore.ipynb
-    connection = "postgresql+psycopg://<username>:<password>@<DB host>:5432/<DB name>"
+
+    # Create the connection string for pgvector. Ref: https://github.com/langchain-ai/langchain-postgres/blob/main/examples/vectorstore.ipynb
+    db_user = os.getenv('PGUSER')
+    db_password = os.getenv('PGPASSWORD')
+    db_host = os.getenv('PGHOST')
+    db_port = os.getenv('PGPORT')
+    db_name = os.getenv('PGDATABASE')
+    connection = f"postgresql+psycopg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
 
 main()
