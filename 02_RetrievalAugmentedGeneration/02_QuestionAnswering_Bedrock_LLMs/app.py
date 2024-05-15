@@ -223,6 +223,11 @@ if __name__ == '__main__':
     BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-west-2')
     
     # Create the connection string for pgvector. Ref: https://github.com/langchain-ai/langchain-postgres/blob/main/examples/vectorstore.ipynb
-    connection = "postgresql+psycopg://<username>:<password>@<DB host>:5432/<DB name>"
+    db_user = os.getenv('PGUSER')
+    db_password = os.getenv('PGPASSWORD')
+    db_host = os.getenv('PGHOST')
+    db_port = os.getenv('PGPORT')
+    db_name = os.getenv('PGDATABASE')
+    connection = f"postgresql+psycopg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
     main()
