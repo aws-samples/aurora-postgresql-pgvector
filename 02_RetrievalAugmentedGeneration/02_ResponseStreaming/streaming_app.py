@@ -1,16 +1,16 @@
 # Import libraries
 from PyPDF2 import PdfReader
 from langchain_community.embeddings import BedrockEmbeddings
-from langchain_community.llms import Bedrock
-from langchain_community.chat_models import BedrockChat
+from langchain_aws import ChatBedrock
 from langchain.schema import (
     AIMessage,
     HumanMessage
 )
-from langchain.prompts import ChatPromptTemplate
-from langchain.prompts import SystemMessagePromptTemplate
-from langchain.prompts import HumanMessagePromptTemplate
-from langchain.vectorstores.pgvector import PGVector
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import SystemMessagePromptTemplate
+from langchain_core.prompts import HumanMessagePromptTemplate
+from langchain_postgres import PGVector
+from langchain_postgres.vectorstores import PGVector
 from langchain.chains import ConversationalRetrievalChain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.callbacks.base import BaseCallbackHandler
