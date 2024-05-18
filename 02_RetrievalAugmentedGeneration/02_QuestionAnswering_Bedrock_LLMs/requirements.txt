@@ -2,6 +2,7 @@ streamlit
 langchain
 langchain-postgres
 langchain-aws
+langchain-community
 PyPDF2
 python-dotenv
 altair
