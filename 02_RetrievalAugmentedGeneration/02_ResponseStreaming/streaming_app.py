@@ -90,7 +90,7 @@ def main():
         with st.chat_message("Assistant"):
             stream_handler = StreamHandler(st.empty())
 
-            llm = ChatBedrock(model_id="anthropic.claude-3-haiku-20240307-v1:0", streaming=True, callbacks=[stream_handler], client=BEDROCK_CLIENT)
+            llm = BedrockChat(model_id="anthropic.claude-3-haiku-20240307-v1:0", streaming=True, callbacks=[stream_handler], client=BEDROCK_CLIENT)
             llm.model_kwargs = {"temperature": 0.5, "max_tokens": 8191}
 
             general_system_template = """ 
