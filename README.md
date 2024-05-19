@@ -24,3 +24,30 @@ This repository is intended for educational purposes and does not accept further
 ### License
 
 The use cases and sample code with pgvector and Aurora PostgreSQL is released under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html).
+
+
+# Aurora PostgreSQL and pgvector Sample Code
+
+Welcome to the repository for leveraging **pgvector** on Amazon **Aurora PostgreSQL-Compatible Edition**, Amazon **Bedrock**, and **Generative AI**! This repository contains sample code demonstrating various use cases and integrations.
+
+## Introduction
+
+This repository showcases how to utilize **pgvector**, an open-source PostgreSQL extension for vector similarity search. Pgvector is designed to work seamlessly with other PostgreSQL features, including indexing and querying, making it a powerful tool for various applications.
+
+## Use Cases
+
+Here are some exciting use cases covered in this repository:
+
+1. **Product Recommendations** 🛒
+2. **Retrieval Augmented Generation (RAG)** 🔄
+3. **Semantic Search and Sentiment Analysis** 🧠
+4. **Knowledge Bases for Amazon Bedrock with Aurora PostgreSQL** 📚
+5. **Movie Recommendations using Aurora ML and Amazon Bedrock** 🎬
+
+## Getting Started
+
+To get started, clone the repository and follow the setup instructions provided in the respective directories for each use case.
+
+```bash
+git clone https://github.com/aws-samples/aurora-postgresql-pgvector.git
+cd aurora-postgresql-pgvector
