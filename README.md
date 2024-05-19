@@ -5,11 +5,6 @@ This repository showcases how to utilize [**pgvector**](https://github.com/pgvec
 1. AWS blog post: [Leverage pgvector and Amazon Aurora PostgreSQL for Natural Language Processing, Chatbots and Sentiment Analysis](https://aws.amazon.com/blogs/database/leverage-pgvector-and-amazon-aurora-postgresql-for-natural-language-processing-chatbots-and-sentiment-analysis/).
 2. AWS Workshop: [Generative AI Use Cases with Aurora PostgreSQL and pgvector](https://catalog.workshops.aws/pgvector/en-US).
 
-
-### What is pgvector?
-
-[pgvector] is an open-source PostgreSQL extension for vector similarity search. It’s designed to work seamlessly with other PostgreSQL features, including indexing and querying.
-
 ### Use Cases
 Here are some exciting use cases covered in this repository:
 
