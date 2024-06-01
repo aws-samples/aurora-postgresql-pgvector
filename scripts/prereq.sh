@@ -54,7 +54,7 @@ function clone_git()
 
 function configure_pg()
 {
-    AWS_REGION=`aws configure get region`
+    #AWS_REGION=`aws configure get region`
 
     PGHOST=`aws rds describe-db-cluster-endpoints \
         --db-cluster-identifier apgpg-pgvector \
@@ -188,17 +188,6 @@ function check_installation()
 	overall="False"
     fi
 
-
-
-
-    # Checking Streamlit
-    streamlit --version | grep -i streamlit > /dev/null 2>&1
-    if [ $? -eq 0 ] ; then
-        echo "Streamlit installation successful : OK"
-    else
-        echo "Streamlit installation FAILED : NOTOK"
-	overall="False"
-    fi
 
     echo "=================================="
     if [ ${overall} == "True" ] ; then
