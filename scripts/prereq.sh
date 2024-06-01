@@ -83,6 +83,9 @@ function configure_pg()
     echo "export PGPASSWORD='$PGPASSWORD'" >> /home/ec2-user/.bashrc
     echo "export PGHOST=$PGHOST" >> /home/ec2-user/.bashrc
     echo "export AWS_REGION=$AWS_REGION" >> /home/ec2-user/.bashrc
+    echo "export AWSREGION=$AWS_REGION" >> /home/ec2-user/.bashrc
+    echo "export PGDATABASE=postgres" >> /home/ec2-user/.bashrc
+    echo "export PGPORT=5432" >> /home/ec2-user/.bashrc
 
 
     echo "export PGVECTOR_DRIVER='psycopg2'" >> /home/ec2-user/.bashrc
@@ -180,7 +183,7 @@ function check_installation()
     fi
 
     # Checking Streamlit
-    streamlit --version | grep streamlit > /dev/null 2>&1
+    streamlit --version | grep -i streamlit > /dev/null 2>&1
     if [ $? -eq 0 ] ; then
         echo "Streamlit installation successful : OK"
     else
