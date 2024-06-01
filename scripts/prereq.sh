@@ -2,6 +2,9 @@
 
 export PROJ_NAME="aurora-postgresql-pgvector"
 export GITHUB_URL="https://github.com/aws-samples/"
+export PYTHON_MAJOR_VERSION="3.11"
+export PYTHON_MINOR_VERSION="9"
+export PYTHON_VERSION="${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}"
 
 function print_line()
 {
@@ -51,7 +54,7 @@ function clone_git()
 
 function configure_pg()
 {
-    AWS_REGION=`aws configure get region`
+    #AWS_REGION=`aws configure get region`
 
     PGHOST=`aws rds describe-db-cluster-endpoints \
         --db-cluster-identifier apgpg-pgvector \
@@ -83,6 +86,9 @@ function configure_pg()
     echo "export PGPASSWORD='$PGPASSWORD'" >> /home/ec2-user/.bashrc
     echo "export PGHOST=$PGHOST" >> /home/ec2-user/.bashrc
     echo "export AWS_REGION=$AWS_REGION" >> /home/ec2-user/.bashrc
+    echo "export AWSREGION=$AWS_REGION" >> /home/ec2-user/.bashrc
+    echo "export PGDATABASE=postgres" >> /home/ec2-user/.bashrc
+    echo "export PGPORT=5432" >> /home/ec2-user/.bashrc
 
 
     echo "export PGVECTOR_DRIVER='psycopg2'" >> /home/ec2-user/.bashrc
@@ -98,37 +104,31 @@ function install_extension()
     psql -h ${PGHOST} -c "create extension if not exists vector"
 }
 
-function install_python311()
+function install_python3()
 {
-    # Install Python 3.11
+    # Install Python 3
     sudo yum remove -y openssl-devel > ${TERM} 2>&1
     sudo yum install -y gcc openssl11-devel bzip2-devel libffi-devel  > ${TERM} 2>&1
 
-    echo "Checking if python3.11 is already installed"
-    if [ -f /usr/local/bin/python3.11 ] ; then 
-        echo "Python3.11 already exists"
+    echo "Checking if python${PYTHON_MAJOR_VERSION} is already installed"
+    if [ -f /usr/local/bin/python${PYTHON_MAJOR_VERSION} ] ; then 
+        echo "Python${PYTHON_MAJOR_VERSION} already exists"
 	return
     fi
 
     cd /opt
-    echo "Installing python3.11.9"
-    sudo wget https://www.python.org/ftp/python/3.11.9/Python-3.11.9.tgz  > ${TERM} 2>&1
-    sudo tar xzf Python-3.11.9.tgz  > ${TERM} 2>&1
-    cd Python-3.11.9
+    echo "Installing python ${PYTHON_VERSION}"
+    sudo wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz  > ${TERM} 2>&1
+    sudo tar xzf Python-${PYTHON_VERSION}.tgz  > ${TERM} 2>&1
+    cd Python-${PYTHON_VERSION}
     sudo ./configure --enable-optimizations  > ${TERM} 2>&1
     sudo make altinstall  > ${TERM} 2>&1
-    sudo rm -f /opt/Python-3.11.9.tgz
-    pip3.11 install --upgrade pip  > ${TERM} 2>&1
+    sudo rm -f /opt/Python-{$PYTHON_VERSION}.tgz
+    pip${PYTHON_MAJOR_VERSION} install --upgrade pip  > ${TERM} 2>&1
 
-}
-
-function install_requirements()
-{
-    echo "Installing python requirements"
-    cd $HOME/environment/${PROJ_NAME}/02_RetrievalAugmentedGeneration/02_QuestionAnswering_Bedrock_LLMs/
-    pip3.11 install -r requirements.txt > ${TERM} 2>&1
-    echo "Shell output of installing requirements ${?}"
-
+    echo "Making this version of python as default"
+    sudo rm /usr/bin/python3
+    sudo ln -s /usr/local/bin/python${PYTHON_MAJOR_VERSION} /usr/bin/python3 
 }
 
 function install_c9()
@@ -153,7 +153,7 @@ function check_installation()
     fi
     
     # Checking clone
-    if [ -d ${HOME}/environment/${PROJ_NAME}/DAT303 ] ; then 
+    if [ -d ${HOME}/environment/${PROJ_NAME}/ ] ; then 
         echo "Git Clone successful : OK"
     else
         echo "Git Clone FAILED : NOTOK"
@@ -170,8 +170,8 @@ function check_installation()
 	overall="False"
     fi
 
-    # Checking python3.11
-    /usr/local/bin/python3.11 --version | grep Python  > /dev/null 2>&1
+    # Checking python
+    /usr/local/bin/python${PYTHON_MAJOR_VERSION} --version | grep Python  > /dev/null 2>&1
     if [ $? -eq 0 ] ; then
         echo "Python installation successful : OK"
     else
@@ -179,14 +179,15 @@ function check_installation()
 	overall="False"
     fi
 
-    # Checking Streamlit
-    streamlit --version | grep streamlit > /dev/null 2>&1
+    # Checking python3
+    python3 --version | grep ${PYTHON_VERSION}  > /dev/null 2>&1
     if [ $? -eq 0 ] ; then
-        echo "Streamlit installation successful : OK"
+        echo "Python default installation successful : OK"
     else
-        echo "Streamlit installation FAILED : NOTOK"
+        echo "Python default installation FAILED : NOTOK"
 	overall="False"
     fi
+
 
     echo "=================================="
     if [ ${overall} == "True" ] ; then
@@ -237,8 +238,7 @@ install_extension
 print_line
 install_c9
 print_line
-install_python311
-install_requirements
+install_python3
 print_line
 check_installation
 cp_logfile
