@@ -73,41 +73,39 @@ BEGIN
     COMMIT;
 END$$;
 
-CREATE OR REPLACE FUNCTION movie.get_reviews_summary(pmovieid bigint) 
-RETURNS jsonb LANGUAGE plpgsql  AS $$
+CREATE OR REPLACE FUNCTION movie.get_reviews_summary(p_movieid bigint) RETURNS jsonb AS 
+$$
 DECLARE 
-    v1 text ;
-    rsummary jsonb;
+        v_summary jsonb;
+        v_count int;
+        v_sql text;
 BEGIN
-	WITH 
-    p AS ( 
-        SELECT '\n\nHuman: Please provide a summary of the following text.\n<text>\n{doc_text}\n </text>\n\nAssistant:' AS prompt
-    )
-    , m AS (
-        SELECT 
-            id, 
-            regexp_replace(
-            regexp_replace(regexp_replace(regexp_replace(STRING_AGG(review, '\n'), E'[\\n\\r]+', '\n', 'g'),
-                '[\\10|/10]', ' out of 10', 'g'), $y$['"-]$y$, '', 'g'), '[^[:ascii:]]', '', 'g')  
-            AS reviews 
-        FROM movie.reviews
-        WHERE id = pmovieid
-        GROUP BY id
-    )
-    SELECT replace(p.prompt, '{doc_text}', m.reviews)  
-    	INTO v1
-    FROM m CROSS JOIN p ;
-    
-    EXECUTE $x$ 
-        	SELECT aws_bedrock.invoke_model(
-         		model_id      := 'anthropic.claude-v2',
-         		content_type  := 'application/json',
-         		accept_type  := 'application/json',
-         		model_input := $1::text
-         		)
-         		$x$
-         into rsummary
-         using '{"prompt": "'|| v1 || '", "max_tokens_to_sample": 4096, "temperature": 0.5, "top_k": 250, "top_p": 0.5, "stop_sequences":[] }' ;
-	RETURN rsummary;         
-END$$;
+        SELECT aws_bedrock.invoke_model(
+                model_id := 'anthropic.claude-v2',
+                content_type := 'application/json',
+                accept_type := 'application/json',
+                model_input := '{"prompt": "\n\nHuman: Please provide a summary of the following text.\n<text>\n'|| sub.reviews || '\n </text>\n\nAssistant:", "max_tokens_to_sample": 4096, "temperature": 0.5, "top_k": 250, "top_p": 0.5, "stop_sequences":[] }' )
+        INTO v_summary
+        FROM    (
+                SELECT id, 
+                        regexp_replace(regexp_replace(regexp_replace(regexp_replace(STRING_AGG(review, '\n'), E'[\\n\\r]+', '\n', 'g'), '[\\10|/10]', ' out of 10', 'g'), $y$['"-]$y$, '', 'g'), '[^[:ascii:]]', '', 'g')  as reviews
+                FROM movie.reviews
+                WHERE id = p_movieid
+                GROUP BY id
+                ) AS sub;
+        GET DIAGNOSTICS v_count := ROW_COUNT;
+
+        IF v_count = 0 THEN
+                v_sql := 'SELECT aws_bedrock.invoke_model(
+                        model_id := ''anthropic.claude-v2'',
+                        content_type := ''application/json'',
+                        accept_type := ''application/json'',
+                        model_input := ''{"prompt": "\n\nHuman: Please provide a summary of the following text.\n<text>\nNo reviews are available.\n </text>\n\nAssistant:", "max_tokens_to_sample": 4096, "temperature": 0.5, "top_k": 250, "top_p": 0.5, "stop_sequences":[] }'' )';
+                EXECUTE v_sql 
+                INTO v_summary;
+        END IF;
+        RETURN v_summary;         
+END
+$$
+LANGUAGE plpgsql;
 
