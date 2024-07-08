@@ -138,14 +138,12 @@ def main():
     st.sidebar.markdown(
     """
     ### Sample questions to get started:
-    1. What is Amazon Aurora?
-    2. How can I migrate from PostgreSQL to Aurora and the other way around?
-    3. What does "three times the performance of PostgreSQL" mean?
-    4. What is Aurora Standard and Aurora I/O-Optimized?
-    5. How do I scale the compute resources associated with my Amazon Aurora DB Instance?
-    6. How does Amazon Aurora improve my databases fault tolerance to disk failures?
-    7. How does Aurora improve recovery time after a database crash?
-    8. How can I improve upon the availability of a single Amazon Aurora database?
+    1. What capabilities does pgvector enable for Aurora PostgreSQL?
+    2. What is Amazon Aurora Optimized Reads for Aurora PostgreSQL?
+    3. How do Amazon Aurora Optimized Reads for Aurora PostgreSQL improve query performance?
+    4. What are agents for Amazon Bedrock?
+    5. How does Knowledge Bases for Amazon Bedrock chunk the documents before converting those chunks to embeddings?
+    6. Which vector databases are supported by Knowledge Bases for Amazon Bedrock?
     """
 )
 
