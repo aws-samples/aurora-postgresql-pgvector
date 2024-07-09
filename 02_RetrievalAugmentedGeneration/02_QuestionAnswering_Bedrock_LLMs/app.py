@@ -205,7 +205,7 @@ def main():
     """
     ### Sample questions to get started:
     1. What capabilities does pgvector enable for Aurora PostgreSQL?
-    2. What is Amazon Aurora Optimized Reads for Aurora PostgreSQL?
+    2. What is Optimized Reads?
     3. How do Amazon Aurora Optimized Reads for Aurora PostgreSQL improve query performance?
     4. What are agents for Amazon Bedrock?
     5. How does Knowledge Bases for Amazon Bedrock chunk the documents before converting those chunks to embeddings?
