@@ -54,7 +54,11 @@ function clone_git()
 
 function configure_pg()
 {
-    #AWS_REGION=`aws configure get region`
+    # Ensure AWS CLI is using the instance profile
+    unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+
+    # Get the current region from the instance metadata
+    export AWS_REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
 
     PGHOST=`aws rds describe-db-cluster-endpoints \
         --db-cluster-identifier apgpg-pgvector \
@@ -63,7 +67,7 @@ function configure_pg()
         --output text`
     export PGHOST
 
-    # Retrieve credentials from Secrets Manager - Secret: apgpg-pgvector-secret
+    # Retrieve credentials from Secrets Manager
     CREDS=`aws secretsmanager get-secret-value \
         --secret-id apg-pgvector-secret-RIV \
         --region $AWS_REGION | jq -r '.SecretString'`
