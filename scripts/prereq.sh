@@ -49,7 +49,7 @@ function configure_pg()
     export AWS_REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
 
     PGHOST=`aws rds describe-db-cluster-endpoints \
-        --db-cluster-identifier apgpg-pgvector \
+        --db-cluster-identifier apg-pgvector-riv \
         --region $AWS_REGION \
         --query 'DBClusterEndpoints[0].Endpoint' \
         --output text`
