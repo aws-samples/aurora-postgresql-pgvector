@@ -118,14 +118,6 @@ function install_python3()
     sudo ln -s /usr/local/bin/python${PYTHON_MAJOR_VERSION} /usr/bin/python3 
 }
 
-function install_c9()
-{
-    print_line
-    echo "Installing c9 executable"
-    npm install -g c9
-    print_line
-}
-
 
 function check_installation()
 {
@@ -144,16 +136,6 @@ function check_installation()
         echo "Git Clone successful : OK"
     else
         echo "Git Clone FAILED : NOTOK"
-	overall="False"
-    fi
-   
-    # Checking c9
-    
-    c9 --version > /dev/null 2>&1
-    if [ $? -eq 0 ] ; then
-        echo "C9 installation successful : OK"
-    else
-        echo "C9 installation FAILED : NOTOK"
 	overall="False"
     fi
 
