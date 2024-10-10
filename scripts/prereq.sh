@@ -65,7 +65,7 @@ function configure_pg()
 
     # Retrieve credentials from Secrets Manager - Secret: apgpg-pgvector-secret
     CREDS=`aws secretsmanager get-secret-value \
-        --secret-id apgpg-pgvector-secret \
+        --secret-id apg-pgvector-secret-RIV \
         --region $AWS_REGION | jq -r '.SecretString'`
 
     PGPASSWORD="`echo $CREDS | jq -r '.password'`"
