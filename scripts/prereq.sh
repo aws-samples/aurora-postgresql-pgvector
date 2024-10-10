@@ -1,7 +1,6 @@
 #!/bin/bash
 
 export PROJ_NAME="aurora-postgresql-pgvector"
-export GITHUB_URL="https://github.com/aws-samples/"
 export PYTHON_MAJOR_VERSION="3.11"
 export PYTHON_MINOR_VERSION="9"
 export PYTHON_VERSION="${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}"
@@ -47,48 +46,94 @@ function configure_pg()
 
     # Get the current region from the instance metadata
     export AWS_REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
+    echo "AWS Region: $AWS_REGION"
+    
+    # Print current IAM role information
+    echo "Current IAM role:"
+    aws sts get-caller-identity
 
-    PGHOST=`aws rds describe-db-cluster-endpoints \
-        --db-cluster-identifier apg-pgvector-riv \
+    DB_CLUSTER_ID="apg-pgvector-RIV"
+    echo "Retrieving DB endpoint for cluster: $DB_CLUSTER_ID"
+    PGHOST=$(aws rds describe-db-cluster-endpoints \
+        --db-cluster-identifier $DB_CLUSTER_ID \
         --region $AWS_REGION \
         --query 'DBClusterEndpoints[0].Endpoint' \
-        --output text`
+        --output text)
+    
+    if [ -z "$PGHOST" ]; then
+        echo "Failed to retrieve DB endpoint. Check the cluster identifier and permissions."
+        return 1
+    fi
     export PGHOST
-
+    echo "DB Host: $PGHOST"
+    
     # Retrieve credentials from Secrets Manager
-    CREDS=`aws secretsmanager get-secret-value \
-        --secret-id apg-pgvector-secret-RIV \
-        --region $AWS_REGION | jq -r '.SecretString'`
+    SECRET_NAME="apg-pgvector-secret-RIV"
+    echo "Retrieving secret: $SECRET_NAME"
+    CREDS=$(aws secretsmanager get-secret-value \
+        --secret-id $SECRET_NAME \
+        --region $AWS_REGION)
 
-    PGPASSWORD="`echo $CREDS | jq -r '.password'`"
-    if [ "${PGPASSWORD}X" == "X" ]; then
-        PGPASSWORD="postgres"
+    if [ $? -ne 0 ]; then
+        echo "Failed to retrieve secret. Error:"
+        echo "$CREDS"
+        return 1
     fi
+
+    CREDS=$(echo "$CREDS" | jq -r '.SecretString')
+
+    if [ -z "$CREDS" ]; then
+        echo "Failed to retrieve credentials from Secrets Manager. Check the secret name and permissions."
+        return 1
+    fi
+    
+    PGPASSWORD=$(echo $CREDS | jq -r '.password')
+    PGUSER=$(echo $CREDS | jq -r '.username')
+
+    if [ -z "$PGPASSWORD" ] || [ -z "$PGUSER" ]; then
+        echo "Failed to extract username or password from the secret."
+        return 1
+    fi
+
     export PGPASSWORD
-
-    PGUSER="postgres"
-    PGUSER="`echo $CREDS | jq -r '.username'`"
-    if [ "${PGUSER}X" == "X" ]; then
-        PGUSER="postgres"
-    fi
     export PGUSER
 
-    # Persist values in future terminals
-    echo "export PGUSER=$PGUSER" >> /home/ec2-user/.bashrc
-    echo "export PGPASSWORD='$PGPASSWORD'" >> /home/ec2-user/.bashrc
-    echo "export PGHOST=$PGHOST" >> /home/ec2-user/.bashrc
-    echo "export AWS_REGION=$AWS_REGION" >> /home/ec2-user/.bashrc
-    echo "export AWSREGION=$AWS_REGION" >> /home/ec2-user/.bashrc
-    echo "export PGDATABASE=postgres" >> /home/ec2-user/.bashrc
-    echo "export PGPORT=5432" >> /home/ec2-user/.bashrc
+    echo "Successfully retrieved database credentials"
 
+    # Set environment variables for the current session
+    export PGDATABASE=postgres
+    export PGPORT=5432
+    export PGVECTOR_DRIVER='psycopg2'
+    export PGVECTOR_USER=$PGUSER
+    export PGVECTOR_PASSWORD=$PGPASSWORD
+    export PGVECTOR_HOST=$PGHOST
+    export PGVECTOR_PORT=5432
+    export PGVECTOR_DATABASE='postgres'
 
-    echo "export PGVECTOR_DRIVER='psycopg2'" >> /home/ec2-user/.bashrc
-    echo "export PGVECTOR_USER=${PGUSER}" >> /home/ec2-user/.bashrc
-    echo "export PGVECTOR_PASSWORD='$PGPASSWORD'" >> /home/ec2-user/.bashrc
-    echo "export PGVECTOR_HOST=$PGHOST" >> /home/ec2-user/.bashrc
-    echo "export PGVECTOR_PORT=5432" >> /home/ec2-user/.bashrc
-    echo "export PGVECTOR_DATABASE='postgres'" >> /home/ec2-user/.bashrc
+    # Persist values for future sessions
+    echo "export PGUSER='$PGUSER'" >> ~/.bash_profile
+    echo "export PGPASSWORD='$PGPASSWORD'" >> ~/.bash_profile
+    echo "export PGHOST='$PGHOST'" >> ~/.bash_profile
+    echo "export AWS_REGION='$AWS_REGION'" >> ~/.bash_profile
+    echo "export AWSREGION='$AWS_REGION'" >> ~/.bash_profile
+    echo "export PGDATABASE='postgres'" >> ~/.bash_profile
+    echo "export PGPORT=5432" >> ~/.bash_profile
+    echo "export PGVECTOR_DRIVER='psycopg2'" >> ~/.bash_profile
+    echo "export PGVECTOR_USER='$PGUSER'" >> ~/.bash_profile
+    echo "export PGVECTOR_PASSWORD='$PGPASSWORD'" >> ~/.bash_profile
+    echo "export PGVECTOR_HOST='$PGHOST'" >> ~/.bash_profile
+    echo "export PGVECTOR_PORT=5432" >> ~/.bash_profile
+    echo "export PGVECTOR_DATABASE='postgres'" >> ~/.bash_profile
+
+    echo "Environment variables set and persisted"
+
+    # Test the connection
+    if PGPASSWORD=$PGPASSWORD psql -h $PGHOST -U $PGUSER -d postgres -c "SELECT 1" >/dev/null 2>&1; then
+        echo "Successfully connected to the database."
+    else
+        echo "Failed to connect to the database. Please check your credentials and network settings."
+        return 1
+    fi
 }
 
 function install_python3()
