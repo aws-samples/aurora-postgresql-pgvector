@@ -21,8 +21,6 @@ echo "export PGDATABASE=postgres" >> ~/.bashrc
 # Create a .pgpass file for passwordless login
 echo "$DBENDP:5432:postgres:$DBUSER:$DBPASS" > ~/.pgpass
 chmod 600 ~/.pgpass
-# Clone the default code repository
-git clone $DEFAULT_CODE_REPO ~/code-repo
 # Source the updated .bashrc
 source ~/.bashrc
 # Print completion message
