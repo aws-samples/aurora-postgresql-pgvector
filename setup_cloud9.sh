@@ -1,7 +1,7 @@
 !/bin/bash
 # Install necessary packages
 sudo yum update -y
-sudo yum install -y git python3 python3-pip postgresql
+sudo yum install -y git python3 python3-pip postgresql jq
 # Set up environment variables
 echo "export DB_CLUSTER_IDENTIFIER=${DB_CLUSTER_IDENTIFIER}" >> ~/.bashrc
 echo "export DEFAULT_CODE_REPO=${DEFAULT_CODE_REPO}" >> ~/.bashrc
