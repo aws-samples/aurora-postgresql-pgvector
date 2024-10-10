@@ -201,11 +201,7 @@ export AWS_REGION=`curl -s http://169.254.169.254/latest/dynamic/instance-identi
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text) 
  
 install_postgresql
-clone_git
 configure_pg
-install_extension
-print_line
-install_c9
 print_line
 install_python3
 print_line
