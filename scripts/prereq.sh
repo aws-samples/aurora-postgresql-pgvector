@@ -40,18 +40,6 @@ function install_postgresql()
     sudo yum install -y postgresql-contrib sysbench > ${TERM} 2>&1
 }
 
-function clone_git()
-{
-    print_line
-    echo "Cloning the git repository"
-    print_line
-    cd ${HOME}/environment
-    git clone ${GITHUB_URL}${PROJ_NAME}
-    cd ${PROJ_NAME}
-    print_line
-}
-
-
 function configure_pg()
 {
     # Ensure AWS CLI is using the instance profile
@@ -101,11 +89,6 @@ function configure_pg()
     echo "export PGVECTOR_HOST=$PGHOST" >> /home/ec2-user/.bashrc
     echo "export PGVECTOR_PORT=5432" >> /home/ec2-user/.bashrc
     echo "export PGVECTOR_DATABASE='postgres'" >> /home/ec2-user/.bashrc
-}
-
-function install_extension()
-{
-    psql -h ${PGHOST} -c "create extension if not exists vector"
 }
 
 function install_python3()
