@@ -1,6 +1,4 @@
 !/bin/bash
-# Source the environment variables
-source setup_env_vars.sh
 # Install necessary packages
 sudo yum update -y
 sudo yum install -y git python3 python3-pip postgresql
