@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Ensure HOME is set
+if [ -z "$HOME" ]; then
+    export HOME=$(getent passwd $(id -un) | cut -d: -f6)
+fi
+
 export DefaultCodeRepository="https://github.com/aws-samples/aurora-postgresql-pgvector.git"
 export PROJ_NAME="aurora-postgresql-pgvector"
 export PYTHON_MAJOR_VERSION="3.11"
@@ -8,37 +13,14 @@ export PYTHON_VERSION="${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}"
 
 function git_clone()
 {
-    local max_attempts=3
-    local attempt=1
-    local default_branch="main"
-
-    while [ $attempt -le $max_attempts ]; do
-        echo "Attempt $attempt to clone repository"
-        cd /home/ec2-user/environment || { echo "Failed to change directory to /home/ec2-user/environment"; return 1; }
-        
-        if [ -d "${PROJ_NAME}" ]; then
-            echo "Directory ${PROJ_NAME} already exists. Removing it before cloning."
-            rm -rf "${PROJ_NAME}"
-        fi
-
-        git clone ${DefaultCodeRepository} && {
-            echo "Successfully cloned repository"
-            cd "${PROJ_NAME}" || { echo "Failed to change directory to ${PROJ_NAME}"; return 1; }
-            
-            # Check if the default branch exists, if not, use 'main'
-            git show-ref --verify --quiet "refs/heads/${default_branch}" || default_branch="main"
-            
-            git checkout ${default_branch} || { echo "Failed to checkout ${default_branch} branch"; return 1; }
-            return 0
-        }
-
-        echo "Clone attempt $attempt failed. Retrying in 5 seconds..."
-        sleep 5
-        ((attempt++))
-    done
-
-    echo "Failed to clone repository after $max_attempts attempts"
-    return 1
+    local clone_dir="${HOME}/environment"
+    cd "$clone_dir" || { echo "Failed to change directory to $clone_dir"; return 1; }
+    if [ -d "$PROJ_NAME" ]; then
+        echo "Directory $PROJ_NAME already exists. Removing it before cloning."
+        rm -rf "$PROJ_NAME"
+    fi
+    git clone "$DefaultCodeRepository" || { echo "Failed to clone repository"; return 1; }
+    echo "Successfully cloned repository"
 }
 
 function print_line()
@@ -48,22 +30,24 @@ function print_line()
 
 function install_packages()
 {
-    sudo yum install -y jq  > ${TERM} 2>&1
+    local current_dir
+    current_dir=$(pwd)
+    
+    sudo yum install -y jq  > "${TERM}" 2>&1
     print_line
     source <(curl -s https://raw.githubusercontent.com/aws-samples/aws-swb-cloud9-init/mainline/cloud9-resize.sh)
     echo "Installing aws cli v2"
     print_line
-    aws --version | grep aws-cli\/2 > /dev/null 2>&1
-    if [ $? -eq 0 ] ; then
-        cd $current_dir
-	return
+    if aws --version | grep -q "aws-cli/2"; then
+        echo "AWS CLI v2 is already installed"
+        return
     fi
-    current_dir=`pwd`
-    cd /tmp
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" > ${TERM} 2>&1
-    unzip -o awscliv2.zip > ${TERM} 2>&1
-    sudo ./aws/install --update > ${TERM} 2>&1
-    cd $current_dir
+    
+    cd /tmp || { echo "Failed to change directory to /tmp"; return 1; }
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" > "${TERM}" 2>&1
+    unzip -o awscliv2.zip > "${TERM}" 2>&1
+    sudo ./aws/install --update > "${TERM}" 2>&1
+    cd "$current_dir" || { echo "Failed to return to original directory"; return 1; }
 }
 
 function install_postgresql()
@@ -269,7 +253,7 @@ function cp_logfile()
 }
 # Main program starts here
 
-if [ ${1}X == "-xX" ] ; then
+if [ "${1}X" == "-xX" ] ; then
     TERM="/dev/tty"
 else
     TERM="/dev/null"
@@ -277,13 +261,13 @@ fi
 
 echo "Process started at `date`"
 install_packages
-print_line
-git_clone
-print_line
 
 export AWS_REGION=`curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq .region -r`
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text) 
 
+print_line
+git_clone
+print_line
 install_postgresql
 configure_pg
 print_line
