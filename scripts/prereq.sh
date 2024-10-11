@@ -158,29 +158,40 @@ function configure_pg()
 
 function install_python3()
 {
+    print_line
+    echo "Installing Python ${PYTHON_VERSION}"
+    print_line
+
     # Install Python 3
     sudo yum remove -y openssl-devel > ${TERM} 2>&1
-    sudo yum install -y gcc openssl11-devel bzip2-devel libffi-devel  > ${TERM} 2>&1
+    sudo yum install -y gcc openssl11-devel bzip2-devel libffi-devel > ${TERM} 2>&1
 
     echo "Checking if python${PYTHON_MAJOR_VERSION} is already installed"
-    if [ -f /usr/local/bin/python${PYTHON_MAJOR_VERSION} ] ; then 
+    if command -v python${PYTHON_MAJOR_VERSION} &> /dev/null; then 
         echo "Python${PYTHON_MAJOR_VERSION} already exists"
-	return
+        return
     fi
 
-    cd /opt
-    echo "Installing python ${PYTHON_VERSION}"
-    sudo wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz  > ${TERM} 2>&1
-    sudo tar xzf Python-${PYTHON_VERSION}.tgz  > ${TERM} 2>&1
+    cd /tmp
+    echo "Downloading Python ${PYTHON_VERSION}"
+    wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz > ${TERM} 2>&1 || { echo "Failed to download Python"; return 1; }
+    tar xzf Python-${PYTHON_VERSION}.tgz > ${TERM} 2>&1 || { echo "Failed to extract Python"; return 1; }
     cd Python-${PYTHON_VERSION}
-    sudo ./configure --enable-optimizations  > ${TERM} 2>&1
-    sudo make altinstall  > ${TERM} 2>&1
-    sudo rm -f /opt/Python-{$PYTHON_VERSION}.tgz
-    pip${PYTHON_MAJOR_VERSION} install --upgrade pip  > ${TERM} 2>&1
+    echo "Configuring Python"
+    ./configure --enable-optimizations > ${TERM} 2>&1 || { echo "Failed to configure Python"; return 1; }
+    echo "Building Python (this may take a while)"
+    sudo make altinstall > ${TERM} 2>&1 || { echo "Failed to build Python"; return 1; }
+    cd /tmp
+    rm -rf Python-${PYTHON_VERSION} Python-${PYTHON_VERSION}.tgz
 
-    echo "Making this version of python as default"
-    sudo rm /usr/bin/python3
-    sudo ln -s /usr/local/bin/python${PYTHON_MAJOR_VERSION} /usr/bin/python3 
+    echo "Updating Python symlinks"
+    sudo ln -sf /usr/local/bin/python${PYTHON_MAJOR_VERSION} /usr/bin/python3
+    sudo ln -sf /usr/local/bin/pip${PYTHON_MAJOR_VERSION} /usr/bin/pip3
+
+    echo "Upgrading pip"
+    /usr/local/bin/python${PYTHON_MAJOR_VERSION} -m pip install --upgrade pip > ${TERM} 2>&1
+
+    echo "Python ${PYTHON_VERSION} installation completed"
 }
 
 
@@ -188,51 +199,51 @@ function check_installation()
 {
     overall="True"
     #Checking postgresql 
-    psql -c "select version()" | grep PostgreSQL > /dev/null 2>&1
-    if [ $? -eq 0 ] ; then
+    if psql -c "select version()" | grep -q PostgreSQL; then
         echo "PostgreSQL installation successful : OK"
     else
         echo "PostgreSQL installation FAILED : NOTOK"
-	overall="False"
+        echo "Error: $(psql -c "select version()" 2>&1)"
+        overall="False"
     fi
     
     # Checking clone
-    if [ -d ${HOME}/environment/${PROJ_NAME}/ ] ; then 
+    if [ -d "${HOME}/environment/${PROJ_NAME}/" ]; then 
         echo "Git Clone successful : OK"
     else
         echo "Git Clone FAILED : NOTOK"
-	overall="False"
+        echo "Error: Directory ${HOME}/environment/${PROJ_NAME}/ does not exist"
+        overall="False"
     fi
 
     # Checking python
-    /usr/local/bin/python${PYTHON_MAJOR_VERSION} --version | grep Python  > /dev/null 2>&1
-    if [ $? -eq 0 ] ; then
-        echo "Python installation successful : OK"
+    if command -v python${PYTHON_MAJOR_VERSION} &> /dev/null; then
+        echo "Python${PYTHON_MAJOR_VERSION} installation successful : OK"
+        python${PYTHON_MAJOR_VERSION} --version
     else
-        echo "Python installation FAILED : NOTOK"
-	overall="False"
+        echo "Python${PYTHON_MAJOR_VERSION} installation FAILED : NOTOK"
+        echo "Error: python${PYTHON_MAJOR_VERSION} command not found"
+        overall="False"
     fi
 
     # Checking python3
-    python3 --version | grep ${PYTHON_VERSION}  > /dev/null 2>&1
-    if [ $? -eq 0 ] ; then
-        echo "Python default installation successful : OK"
+    if command -v python3 &> /dev/null; then
+        echo "Python3 symlink created successfully : OK"
+        python3 --version
     else
-        echo "Python default installation FAILED : NOTOK"
-	overall="False"
+        echo "Python3 symlink creation FAILED : NOTOK"
+        echo "Error: python3 command not found"
+        overall="False"
     fi
 
-
     echo "=================================="
-    if [ ${overall} == "True" ] ; then
+    if [ "${overall}" == "True" ]; then
         echo "Overall status : OK"
     else
         echo "Overall status : FAILED"
     fi
     echo "=================================="
-
 }
-
 
 function cp_logfile()
 {
