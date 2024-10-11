@@ -277,11 +277,13 @@ fi
 
 echo "Process started at `date`"
 install_packages
+print_line
+git_clone
+print_line
 
 export AWS_REGION=`curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq .region -r`
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text) 
 
-git_clone()
 install_postgresql
 configure_pg
 print_line
