@@ -88,7 +88,7 @@ function configure_pg()
     echo "DB Host: $PGHOST"
     
     # Retrieve credentials from Secrets Manager
-    SECRET_NAME="apg-pgvector-secret"
+    SECRET_NAME="apgpg-pgvector-secret"
     echo "Retrieving secret: $SECRET_NAME"
     CREDS=$(aws secretsmanager get-secret-value \
         --secret-id $SECRET_NAME \
