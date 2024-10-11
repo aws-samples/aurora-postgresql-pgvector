@@ -17,7 +17,7 @@ function git_clone()
     cd "$clone_dir" || { echo "Failed to change directory to $clone_dir"; return 1; }
     if [ -d "$PROJ_NAME" ]; then
         echo "Directory $PROJ_NAME already exists. Removing it before cloning."
-        rm -rf "$PROJ_NAME"
+        sudo rm -rf "$PROJ_NAME"
     fi
     git clone "$DefaultCodeRepository" || { echo "Failed to clone repository"; return 1; }
     echo "Successfully cloned repository"
