@@ -8,8 +8,37 @@ export PYTHON_VERSION="${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}"
 
 function git_clone()
 {
-    cd /home/ec2-user/environment
-    git clone ${DefaultCodeRepository}
+    local max_attempts=3
+    local attempt=1
+    local default_branch="main"
+
+    while [ $attempt -le $max_attempts ]; do
+        echo "Attempt $attempt to clone repository"
+        cd /home/ec2-user/environment || { echo "Failed to change directory to /home/ec2-user/environment"; return 1; }
+        
+        if [ -d "${PROJ_NAME}" ]; then
+            echo "Directory ${PROJ_NAME} already exists. Removing it before cloning."
+            rm -rf "${PROJ_NAME}"
+        fi
+
+        git clone ${DefaultCodeRepository} && {
+            echo "Successfully cloned repository"
+            cd "${PROJ_NAME}" || { echo "Failed to change directory to ${PROJ_NAME}"; return 1; }
+            
+            # Check if the default branch exists, if not, use 'main'
+            git show-ref --verify --quiet "refs/heads/${default_branch}" || default_branch="main"
+            
+            git checkout ${default_branch} || { echo "Failed to checkout ${default_branch} branch"; return 1; }
+            return 0
+        }
+
+        echo "Clone attempt $attempt failed. Retrying in 5 seconds..."
+        sleep 5
+        ((attempt++))
+    done
+
+    echo "Failed to clone repository after $max_attempts attempts"
+    return 1
 }
 
 function print_line()
@@ -251,7 +280,8 @@ install_packages
 
 export AWS_REGION=`curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq .region -r`
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text) 
- 
+
+git_clone()
 install_postgresql
 configure_pg
 print_line
