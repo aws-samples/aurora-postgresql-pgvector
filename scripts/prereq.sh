@@ -6,7 +6,11 @@ export PYTHON_MAJOR_VERSION="3.11"
 export PYTHON_MINOR_VERSION="9"
 export PYTHON_VERSION="${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}"
 
-git clone ${DefaultCodeRepository}
+function git_clone()
+{
+    cd /home/ec2-user/environment
+    git clone ${DefaultCodeRepository}
+}
 
 function print_line()
 {
