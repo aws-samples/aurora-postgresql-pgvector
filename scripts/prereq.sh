@@ -1,9 +1,12 @@
 #!/bin/bash
 
+export DefaultCodeRepository="https://github.com/aws-samples/aurora-postgresql-pgvector.git"
 export PROJ_NAME="aurora-postgresql-pgvector"
 export PYTHON_MAJOR_VERSION="3.11"
 export PYTHON_MINOR_VERSION="9"
 export PYTHON_VERSION="${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}"
+
+git clone ${DefaultCodeRepository}
 
 function print_line()
 {
