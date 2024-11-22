@@ -1,0 +1,154 @@
+{
+  "functions": [
+    {
+      "name": "check_rds_state",
+      "description": "Function checks the current RDS state using the db_instance_identifier parameter",
+      "parameters": {
+        "db_instance_identifier": {
+          "description": "Instance identifier to check the instance state",
+          "required": true,
+          "type": "string"
+        }
+      },
+      "requireConfirmation": "DISABLED"
+    },
+    {
+      "name": "run_query",
+      "description": "Function to run the SQL query passed as a parameter on the given database instance identifier\n",
+      "parameters": {
+        "db_instance_identifier": {
+          "description": "Instance to run the query",
+          "required": true,
+          "type": "string"
+        },
+        "query": {
+          "description": "SQL Query to be run",
+          "required": true,
+          "type": "string"
+        }
+      },
+      "requireConfirmation": "DISABLED"
+    },
+    {
+      "name": "get_cpu_metrics",
+      "description": "Function to get the CPUUtilization metric on the given instance identifier in the last amout of time specified",
+      "parameters": {
+        "db_instance_identifier": {
+          "description": "Instance identifier to get the CPU usage",
+          "required": true,
+          "type": "string"
+        },
+        "metric_time": {
+          "description": "How many hours behind to get the CPU metrics",
+          "required": true,
+          "type": "string"
+        }
+      },
+      "requireConfirmation": "DISABLED"
+    },
+    {
+      "name": "get_iops_metrics",
+      "description": "Function to get the IOPS metrics on the given instance identifier.\nIt takes db_instance_identifier and metric_time as a parameter.\nThe metric time is specified in hours for which the IOPS metris needs to be calculated\n",
+      "parameters": {
+        "db_instance_identifier": {
+          "description": "Instance identifier to get the IOPS usage",
+          "required": true,
+          "type": "string"
+        },
+        "metric_time": {
+          "description": "How many hours behind to get the IOPS metrics",
+          "required": true,
+          "type": "string"
+        }
+      },
+      "requireConfirmation": "DISABLED"
+    },
+    {
+      "name": "scale_up_instance",
+      "description": "Function to scale up the instance to the next available instance class to fix the alert CPUUtilization.\n",
+      "parameters": {
+        "db_instance_identifier": {
+          "description": "Instance identifier where the scale up needs to happen",
+          "required": true,
+          "type": "string"
+        }
+      },
+      "requireConfirmation": "DISABLED"
+    },
+    {
+      "name": "increase_iops",
+      "description": "Function to increase the IOPS provisioned on the given instance identifier",
+      "parameters": {
+        "db_instance_identifier": {
+          "description": "Instance identifier where the IOPS needs to be increased",
+          "required": true,
+          "type": "string"
+        },
+        "percent_increase": {
+          "description": "Percentage of IOPS needs to be increased in the given instance identifier",
+          "required": true,
+          "type": "string"
+        }
+      },
+      "requireConfirmation": "DISABLED"
+    },
+    {
+      "name": "get_provisioned_iops",
+      "description": "Functions gets the provisioned IOPS of the given RDS instance.",
+      "parameters": {
+        "db_instance_identifier": {
+          "description": "Instance identifier to get the provisioned iops",
+          "required": true,
+          "type": "string"
+        }
+      },
+      "requireConfirmation": "DISABLED"
+    },
+    {
+      "name": "get_max_acu",
+      "description": "Function to get the max ACU allocation of the Aurora instance",
+      "parameters": {
+        "db_instance_identifier": {
+          "description": "Function to get the max ACU allocation of the Aurora instance",
+          "required": false,
+          "type": "string"
+        }
+      },
+      "requireConfirmation": "DISABLED"
+    },
+    {
+      "name": "get_acu_metrics",
+      "description": "Function to get the ACU metrics on the given Aurora instance identifier. It takes db_instance_identifier and metric_time as a parameter. The metric time is specified in hours for which the ACU metris needs to be calculated",
+      "parameters": {
+	"db_instance_identifier": {
+            "description": "Instance identifier to get the ACU metrics",
+            "required": true,
+            "type": "string"
+          },
+	"metric_time": {
+            "description": "How many hours behind to get the CPU metrics",
+            "required": true,
+            "type": "string"
+          }
+        },
+      "requireConfirmation": "DISABLED"
+    },
+    {
+      "name": "increase_acu",
+      "description": "Function to increase the max ACU utilization of the Aurora Serverless V2 cluster. It takes db_instance_identifier and percent_increase as the parameters",
+      "parameters": {
+	"db_instance_identifier": {
+            "description": "Instance identifier to increase the ACU utilization",
+            "required": true,
+            "type": "string"
+          },
+	"percent_increase": {
+            "description": "Percentage increase of the ACU",
+            "required": true,
+            "type": "string"
+          }
+        },
+      "requireConfirmation": "DISABLED"
+    }
+  ]
+}
