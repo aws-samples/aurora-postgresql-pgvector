@@ -1,0 +1,7 @@
+ELASTICACHE_HOST='<<your_elasticache_host>>'
+ELASTICACHE_PORT=6379
+DB_HOST='<<your_db_endpoint>>'
+DB_NAME='<<db_name>>'
+DB_USER='<<db_user>>'
+DB_PASSWORD='<<db_password>>'
+AWS_REGION='us-east-1'

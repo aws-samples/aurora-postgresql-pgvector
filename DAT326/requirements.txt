@@ -1,0 +1,7 @@
+streamlit
+boto3
+redis
+psycopg
+psycopg-binary
+uuid
+python-dotenv
