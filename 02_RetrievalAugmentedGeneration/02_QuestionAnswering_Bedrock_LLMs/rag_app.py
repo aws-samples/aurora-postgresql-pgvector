@@ -3,18 +3,44 @@ from dotenv import load_dotenv
 from PyPDF2 import PdfReader
 from langchain_postgres import PGVector
 from langchain_postgres.vectorstores import PGVector
-from langchain.memory import ConversationSummaryBufferMemory
-from langchain.chains import ConversationalRetrievalChain
-from htmlTemplates import css
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import BedrockEmbeddings
+from langchain_aws import BedrockEmbeddings
 from langchain_aws import ChatBedrock
 from langchain_core.prompts import PromptTemplate
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.memory import BaseMemory
+from langchain.chains import ConversationalRetrievalChain
 import streamlit as st
 import boto3
 from PIL import Image
 import os
 import traceback
+import json
+from typing import Dict, Any, List
+from htmlTemplates import css
+
+class SimpleChatMemory(BaseMemory):
+    """A simple chat memory implementation that doesn't require token counting."""
+    chat_history: List = []
+    
+    def clear(self):
+        """Clear memory contents."""
+        self.chat_history = []
+    
+    @property
+    def memory_variables(self) -> List[str]:
+        """Return memory variables."""
+        return ["chat_history"]
+    
+    def load_memory_variables(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        """Load memory variables."""
+        return {"chat_history": self.chat_history}
+    
+    def save_context(self, inputs: Dict[str, Any], outputs: Dict[str, Any]) -> None:
+        """Save context from this conversation to buffer."""
+        if inputs.get("question") and outputs.get("answer"):
+            self.chat_history.append(HumanMessage(content=inputs["question"]))
+            self.chat_history.append(AIMessage(content=outputs["answer"]))
 
 # TODO: This function takes a list of PDF documents as input and extracts the text from them using PdfReader. 
 # It concatenates the extracted text and returns it.
@@ -38,28 +64,27 @@ import traceback
 
 # This function is responsible for processing the user's input question and generating a response from the chatbot
 def handle_userinput(user_question):
-    
+    """Process user input and generate response."""
     if "chat_history" not in st.session_state:
-        st.session_state.chat_history = None
+        st.session_state.chat_history = []
     
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-        
     try:
         response = st.session_state.conversation({'question': user_question})
         
-    except ValueError:
-        st.write("Sorry, I didn't understand that. Could you rephrase your question?")
+        # Update chat history
+        st.session_state.chat_history = response.get('chat_history', [])
+        
+        # Display messages
+        for message in st.session_state.chat_history:
+            if isinstance(message, HumanMessage):
+                st.success(message.content, icon="🤔")
+            else:
+                st.write(message.content)
+                
+    except Exception as e:
+        st.write("Sorry, I encountered an error processing your question. Could you try rephrasing it?")
+        print(f"Error: {str(e)}")
         print(traceback.format_exc())
-        return
-
-    st.session_state.chat_history = response['chat_history']
-
-    for i, message in enumerate(st.session_state.chat_history):
-        if i % 2 == 0:
-            st.success(message.content, icon="🤔")
-        else:
-            st.write(message.content)
 
 # Streamlit components
 def main():
