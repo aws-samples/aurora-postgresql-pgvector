@@ -3,22 +3,49 @@ from dotenv import load_dotenv
 from PyPDF2 import PdfReader
 from langchain_postgres import PGVector
 from langchain_postgres.vectorstores import PGVector
-from langchain.memory import ConversationSummaryBufferMemory
-from langchain.chains import ConversationalRetrievalChain
-from htmlTemplates import css
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import BedrockEmbeddings
+from langchain_aws import BedrockEmbeddings
 from langchain_aws import ChatBedrock
 from langchain_core.prompts import PromptTemplate
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.memory import BaseMemory
+from langchain.chains import ConversationalRetrievalChain
 import streamlit as st
 import boto3
 from PIL import Image
 import os
 import traceback
+import json
+from typing import Dict, Any, List
+from htmlTemplates import css
+
+class SimpleChatMemory(BaseMemory):
+    """A simple chat memory implementation that doesn't require token counting."""
+    chat_history: List = []
+    
+    def clear(self):
+        """Clear memory contents."""
+        self.chat_history = []
+    
+    @property
+    def memory_variables(self) -> List[str]:
+        """Return memory variables."""
+        return ["chat_history"]
+    
+    def load_memory_variables(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        """Load memory variables."""
+        return {"chat_history": self.chat_history}
+    
+    def save_context(self, inputs: Dict[str, Any], outputs: Dict[str, Any]) -> None:
+        """Save context from this conversation to buffer."""
+        if inputs.get("question") and outputs.get("answer"):
+            self.chat_history.append(HumanMessage(content=inputs["question"]))
+            self.chat_history.append(AIMessage(content=outputs["answer"]))
 
 # This function takes a list of PDF documents as input and extracts the text from them using PdfReader. 
 # It concatenates the extracted text and returns it.
 def get_pdf_text(pdf_docs):
+    """Extract text from uploaded PDF documents."""
     text = ""
     for pdf in pdf_docs:
         pdf_reader = PdfReader(pdf)
@@ -29,38 +56,50 @@ def get_pdf_text(pdf_docs):
 # Given the extracted text, this function splits it into smaller chunks using the RecursiveCharacterTextSplitter module. 
 # The chunk size, overlap, and other parameters are configured to optimize processing efficiency.
 def get_text_chunks(text):
+    """Split text into smaller chunks for processing."""
     text_splitter = RecursiveCharacterTextSplitter(
         separators=["\n\n", "\n", ".", " "],
-        chunk_size=1000, 
-        chunk_overlap=200, 
+        chunk_size=1000,
+        chunk_overlap=200,
         length_function=len
-     )
-
+    )
     chunks = text_splitter.split_text(text)
     return chunks
-
+    
 # This function takes the text chunks as input and creates a vector store using Bedrock Embeddings (Titan) and pgvector. 
 # The vector store stores the vector representations of the text chunks, enabling efficient retrieval based on semantic similarity.
 def get_vectorstore(text_chunks):
-    # Create the Titan embeddings
-    embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-text-v2:0", client=BEDROCK_CLIENT)
+    """Create vector store using Bedrock Embeddings and pgvector."""
+    embeddings = BedrockEmbeddings(
+        model_id="amazon.titan-embed-text-v2:0",
+        client=BEDROCK_CLIENT,
+        region_name="us-west-2"
+    )
     if text_chunks is None:
         return PGVector(
             connection=connection,
             embeddings=embeddings,
             use_jsonb=True
         )
-    return PGVector.from_texts(texts=text_chunks, embedding=embeddings, connection=connection)
-        
+    return PGVector.from_texts(
+        texts=text_chunks,
+        embedding=embeddings,
+        connection=connection
+    )
+    
 # Here, a conversation chain is created using the conversational AI model (Anthropic's Claude v2), vector store (created in the previous function), and conversation memory (ConversationSummaryBufferMemory). 
 # This chain allows the Gen AI app to engage in conversational interactions.
 def get_conversation_chain(vectorstore):
-    # Define model_id, client and model keyword arguments for Anthropic Claude v3
-    llm = ChatBedrock(model_id="anthropic.claude-3-sonnet-20240229-v1:0", client=BEDROCK_CLIENT)
-    llm.model_kwargs = {"temperature": 0.5, "max_tokens": 8191}
+    """Create conversation chain using Bedrock's Claude."""
+    llm = ChatBedrock(
+        model_id="anthropic.claude-3-sonnet-20240229-v1:0",
+        client=BEDROCK_CLIENT,
+        model_kwargs={
+            "temperature": 0.5,
+            "max_tokens": 8191
+        }
+    )
     
-    # The text that you give Claude is designed to elicit, or "prompt", a relevant output. A prompt is usually in the form of a question or instructions. When prompting Claude through the API, it is very important to use the correct `\n\nHuman:` and `\n\nAssistant:` formatting.
-    # Claude was trained as a conversational agent using these special tokens to mark who is speaking. The `\n\nHuman:` (you) asks a question or gives instructions, and the`\n\nAssistant:` (Claude) responds.
     prompt_template = """Human: You are a helpful assistant that answers questions directly and only using the information provided in the context below. 
     Guidance for answers:
         - Always use English as the language in your responses.
@@ -79,15 +118,12 @@ def get_conversation_chain(vectorstore):
     Assistant:"""
 
     PROMPT = PromptTemplate(
-        template=prompt_template, input_variables=["context", "question"]
+        template=prompt_template,
+        input_variables=["context", "question"]
     )
     
-    memory = ConversationSummaryBufferMemory(
-        llm=llm,
-        memory_key='chat_history',
-        return_messages=True,
-        ai_prefix="Assistant",
-        output_key='answer')
+    # Use our simplified memory implementation
+    memory = SimpleChatMemory()
     
     conversation_chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
@@ -95,8 +131,9 @@ def get_conversation_chain(vectorstore):
         return_source_documents=True,
         retriever=vectorstore.as_retriever(
             search_type="similarity",
-            search_kwargs={"k": 3, "include_metadata": True}),
-        get_chat_history=lambda h : h,
+            search_kwargs={"k": 3, "include_metadata": True}
+        ),
+        get_chat_history=lambda h: h,
         memory=memory,
         combine_docs_chain_kwargs={'prompt': PROMPT}
     )
@@ -105,28 +142,27 @@ def get_conversation_chain(vectorstore):
 
 # This function is responsible for processing the user's input question and generating a response from the chatbot
 def handle_userinput(user_question):
-    
+    """Process user input and generate response."""
     if "chat_history" not in st.session_state:
-        st.session_state.chat_history = None
+        st.session_state.chat_history = []
     
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-        
     try:
         response = st.session_state.conversation({'question': user_question})
         
-    except ValueError:
-        st.write("Sorry, I didn't understand that. Could you rephrase your question?")
+        # Update chat history
+        st.session_state.chat_history = response.get('chat_history', [])
+        
+        # Display messages
+        for message in st.session_state.chat_history:
+            if isinstance(message, HumanMessage):
+                st.success(message.content, icon="🤔")
+            else:
+                st.write(message.content)
+                
+    except Exception as e:
+        st.write("Sorry, I encountered an error processing your question. Could you try rephrasing it?")
+        print(f"Error: {str(e)}")
         print(traceback.format_exc())
-        return
-
-    st.session_state.chat_history = response['chat_history']
-
-    for i, message in enumerate(st.session_state.chat_history):
-        if i % 2 == 0:
-            st.success(message.content, icon="🤔")
-        else:
-            st.write(message.content)
 
 def main():
     # Set the page configuration for the Streamlit application, including the page title and icon.
