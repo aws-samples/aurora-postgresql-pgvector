@@ -123,7 +123,3 @@ While this repository serves educational purposes and doesn't accept direct cont
 ## 📜 License
 
 This project is licensed under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html), allowing you to use, modify, and distribute the code freely while maintaining attribution.
-
----
-
-*Built with dedication to advancing document intelligence and natural language processing*
