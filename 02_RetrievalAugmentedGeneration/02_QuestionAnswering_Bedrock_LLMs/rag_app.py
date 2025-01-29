@@ -93,7 +93,7 @@ def handle_userinput(user_question):
 def main():
     # Page configuration
     st.set_page_config(
-        page_title="Gen AI Q&A - Powered by Claude 3 Haiku",
+        page_title="Gen AI Q&A - Powered by Claude 3 Sonnet",
         layout="wide",
         page_icon="🤖"
     )
@@ -117,7 +117,7 @@ def main():
         st.session_state.chat_history = None
 
     # Main content
-    st.header("🤖 Generative AI Q&A powered by Claude 3 Haiku")
+    st.header("🤖 Generative AI Q&A powered by Claude 3 Sonnet")
     st.markdown(
         '<p style="font-size: 16px;">Leveraging '
         '<a href="https://aws.amazon.com/bedrock/">Amazon Bedrock</a> and '
