@@ -114,7 +114,3 @@ This system requires specific IAM roles and policies for Amazon Aurora to commun
 ## 📜 License
 
 This project is released under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html), allowing you to use and modify the code while maintaining attribution.
-
----
-
-*Built with dedication to understanding customer sentiment through advanced natural language processing*
