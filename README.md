@@ -41,6 +41,10 @@ This repository showcases the following production-ready implementations:
 5. **Movie Recommendations** 🎬
    - Implement ML-based movie recommendation systems
    - Combine Aurora ML with Amazon Bedrock for sophisticated predictions
+  
+6. **Democratizing Data Insights with Amazon Q Business** 💼
+   - Connect Amazon Q Business with Aurora PostgreSQL for enterprise-wide data access
+   - Implement secure data exploration through user management and access control lists (ACLs)
 
 ## 🛠️ Getting Started
 
