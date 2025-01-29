@@ -102,7 +102,3 @@ To get the most out of this recommendation system:
 ## 📜 License
 
 This project is licensed under the MIT-0 License, providing you the freedom to learn from and build upon this work. See the LICENSE file for complete details.
-
----
-
-*Built with dedication to advancing personalized shopping experiences through natural language understanding*
