@@ -58,7 +58,7 @@ Let's walk through the setup process step by step:
    pip install -r requirements.txt
    ```
 
-### Database
+### Database Setup
 
 Your Aurora PostgreSQL database needs special capabilities for text analysis. Enable these with:
 
