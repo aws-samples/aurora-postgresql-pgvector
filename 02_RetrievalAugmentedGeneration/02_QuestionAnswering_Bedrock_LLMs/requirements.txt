@@ -3,6 +3,7 @@ langchain
 langchain-postgres
 langchain-aws
 langchain-community
+langchain-core
 PyPDF2
 python-dotenv
 altair
@@ -13,3 +14,5 @@ botocore
 anthropic
 psycopg[binary]
 pgvector
+Pillow
+typing-extensions
