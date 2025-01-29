@@ -115,7 +115,3 @@ For optimal performance:
 ## 📜 License
 
 Released under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html).
-
----
-
-*Built with AWS services for intelligent movie recommendations*
