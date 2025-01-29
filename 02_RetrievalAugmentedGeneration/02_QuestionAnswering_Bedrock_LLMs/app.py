@@ -58,11 +58,11 @@ def get_text_chunks(text):
     if not text:
         return None
         
-    # Optimized chunk size for Claude 3 Haiku
+    # Optimized chunk size for Claude 3 Sonnet
     text_splitter = RecursiveCharacterTextSplitter(
         separators=["\n\n", "\n", ".", " "],
-        chunk_size=800,
-        chunk_overlap=100,
+        chunk_size=1000,
+        chunk_overlap=200,
         length_function=len
     )
     return text_splitter.split_text(text)
@@ -93,23 +93,23 @@ def get_vectorstore(text_chunks):
         return None
 
 def get_conversation_chain(vectorstore):
-    """Create conversation chain using Bedrock's Claude 3 Haiku."""
+    """Create conversation chain using Bedrock's Claude 3 Sonnet."""
     if not vectorstore:
         return None
         
     try:
         llm = ChatBedrock(
-            model_id="anthropic.claude-3-haiku-20240307-v1:0",
+            model_id="anthropic.claude-3-sonnet-20240229-v1:0",
             client=BEDROCK_CLIENT,
             model_kwargs={
-                "temperature": 0.7,
-                "max_tokens": 4096,
+                "temperature": 0.5,
+                "max_tokens": 8192,
                 "top_p": 0.9,
                 "top_k": 250
             }
         )
         
-        prompt_template = """Human: You are a helpful AI assistant powered by Claude 3 Haiku. Your role is to provide clear, concise answers using only the information from the context below.
+        prompt_template = """Human: You are a helpful AI assistant powered by Claude 3 Sonnet. Your role is to provide clear, concise answers using only the information from the context below.
 
         Guidelines for your responses:
         - Use English and maintain a professional yet conversational tone
@@ -138,7 +138,7 @@ def get_conversation_chain(vectorstore):
             return_source_documents=True,
             retriever=vectorstore.as_retriever(
                 search_type="similarity",
-                search_kwargs={"k": 2, "include_metadata": True}
+                search_kwargs={"k": 3, "include_metadata": True}
             ),
             get_chat_history=lambda h: h,
             memory=memory,
@@ -181,7 +181,7 @@ def handle_userinput(user_question):
 def main():
     # Page configuration
     st.set_page_config(
-        page_title="Gen AI Q&A - Powered by Claude 3 Haiku",
+        page_title="Gen AI Q&A - Powered by Claude 3 Sonnet",
         layout="wide",
         page_icon="🤖"
     )
@@ -205,7 +205,7 @@ def main():
         st.session_state.chat_history = None
 
     # Main content
-    st.header("🤖 Generative AI Q&A powered by Claude 3 Haiku")
+    st.header("🤖 Generative AI Q&A powered by Claude 3 Sonnet")
     st.markdown(
         '<p style="font-size: 16px;">Leveraging '
         '<a href="https://aws.amazon.com/bedrock/">Amazon Bedrock</a> and '
