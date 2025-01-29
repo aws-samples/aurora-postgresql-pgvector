@@ -118,7 +118,3 @@ While this repository serves primarily educational purposes and doesn't accept d
 ## 📜 License
 
 This project operates under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html), giving you the freedom to learn from, modify, and build upon this work while maintaining attribution to the original creators.
-
----
-
-*Created with a commitment to advancing document intelligence through streaming technology*
