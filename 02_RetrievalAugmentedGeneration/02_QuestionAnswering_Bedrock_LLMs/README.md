@@ -128,7 +128,3 @@ This project is maintained for educational purposes and demonstrates AWS best pr
 ## 📝 License
 
 This project is licensed under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html) - see the LICENSE file for details.
-
----
-
-*Built with ❤️ using AWS services and open-source technologies*
