@@ -132,5 +132,3 @@ To deepen your understanding:
 - Explore [Aurora ML documentation](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-ml.html)
 - Learn about [Amazon Bedrock capabilities](https://aws.amazon.com/bedrock/)
 - Understand [pgvector](https://github.com/pgvector/pgvector) for similarity searches
-
----
