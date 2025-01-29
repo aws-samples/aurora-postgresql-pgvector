@@ -10,4 +10,4 @@ pgvector==0.2.5
 huggingface-hub==0.25.0
 InstructorEmbedding==1.0.1
 sentence-transformers==2.2.2
-torch==2.0.1
+torch==2.2.0
