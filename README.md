@@ -11,7 +11,7 @@
 
 ## 🌟 Overview
 
-This repository demonstrates production-ready implementations using [**pgvector**](https://github.com/pgvector/pgvector), a powerful open-source PostgreSQL extension for vector similarity search. pgvector seamlessly integrates with PostgreSQL's native features, enabling sophisticated vector operations, indexing, and querying capabilities.
+This repository demonstrates sample code implementations using [**pgvector**](https://github.com/pgvector/pgvector), a powerful open-source PostgreSQL extension for vector similarity search. pgvector seamlessly integrates with PostgreSQL's native features, enabling sophisticated vector operations, indexing, and querying capabilities.
 
 ## 📚 Resources
 
@@ -20,7 +20,7 @@ This repository demonstrates production-ready implementations using [**pgvector*
 
 ## 🚀 Use Cases
 
-This repository showcases the following production-ready implementations:
+This repository showcases the following sample code implementations:
 
 1. **Product Recommendations** 🛒
    - Implement intelligent product recommendation systems
