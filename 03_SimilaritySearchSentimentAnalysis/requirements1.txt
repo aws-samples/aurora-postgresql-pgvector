@@ -1,1 +1,6 @@
-setuptools==65.5.0
+langchain==0.2.16
+langchain-community==0.2.17
+langchain-postgres==0.0.15
+psycopg2-binary==2.9.10
+pgvector==0.2.5
+python-dotenv==1.0.0
