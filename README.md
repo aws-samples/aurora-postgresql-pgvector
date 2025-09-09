@@ -114,20 +114,20 @@ Choose the lab that best matches your needs from our comprehensive catalog below
 
 | Module | Duration | Difficulty | Description |
 |--------|----------|------------|-------------|
-| **[Semantic Search & Sentiment Analysis](/2-semantic-search-and-sentiment-analysis)** | 45 min | 🟢 Beginner | Build a search engine that understands meaning and analyzes customer sentiment using Hugging Face models and Aurora ML |
-| **[Product Recommendations](/3-product-recommendations)** | 45-60 min | 🟢 Beginner | Create a personalized product recommendation engine using Bedrock embeddings and similarity algorithms |
-| **[Retrieval Augmented Generation (RAG)](/4-retrieval-augmented-generation)** | 45-60 min | 🟡 Intermediate | Implement a Q&A chatbot with accurate, grounded responses using RAG architecture |
-| **[Text Summarization](/5-text-summarization)** | 45-60 min | 🟡 Intermediate | Build an automatic summarization system for large documents with key information extraction |
+| **[Semantic Search & Sentiment Analysis](https://catalog.workshops.aws/pgvector/en-US/2-semantic-search-and-sentiment-analysis)** | 45 min | 🟢 Beginner | Build a search engine that understands meaning and analyzes customer sentiment using Hugging Face models and Aurora ML |
+| **[Product Recommendations](https://catalog.workshops.aws/pgvector/en-US/3-product-recommendations)** | 45-60 min | 🟢 Beginner | Create a personalized product recommendation engine using Bedrock embeddings and similarity algorithms |
+| **[Retrieval Augmented Generation (RAG)](https://catalog.workshops.aws/pgvector/en-US/4-retrieval-augmented-generation)** | 45-60 min | 🟡 Intermediate | Implement a Q&A chatbot with accurate, grounded responses using RAG architecture |
+| **[Text Summarization](https://catalog.workshops.aws/pgvector/en-US/5-text-summarization)** | 45-60 min | 🟡 Intermediate | Build an automatic summarization system for large documents with key information extraction |
 
 ### Enterprise Solutions & Agents
 
 | Module | Duration | Difficulty | Description |
 |--------|----------|------------|-------------|
-| **[Amazon Q Business Integration](/6-amazon-q-business-democratizing-organizational-data-insights)** | 45-60 min | 🟡 Intermediate | Deploy an AI-powered data exploration platform for healthcare data democratization |
-| **[Aurora ML + Bedrock Movies](/7-aurora-ml-and-amazon-bedrock-movie-recommendations)** | 45-60 min | 🟡 Intermediate | Build a Netflix-style movie recommendation system using `aws_ml` extension |
-| **[Bedrock Knowledge Bases](/8-bedrock-knowledge-bases)** | 45-60 min | 🟡 Intermediate | Create enterprise knowledge bases for financial documents with regulatory compliance |
-| **[Blaize Bazaar](/9-blaize-bazaar)** | 45-60 min | 🔴 Advanced | Deploy a complete e-commerce platform with AI-powered search and recommendations |
-| **[Incident Detection & Remediation](/10-incident-detection-and-remediation)** | 45-60 min | 🔴 Advanced | Implement intelligent database monitoring with agentic workflows and auto-remediation using MCP servers |
+| **[Amazon Q Business Integration](https://catalog.workshops.aws/pgvector/en-US/6-amazon-q-business-democratizing-organizational-data-insights)** | 45-60 min | 🟡 Intermediate | Deploy an AI-powered data exploration platform for healthcare data democratization |
+| **[Aurora ML + Bedrock Movies](https://catalog.workshops.aws/pgvector/en-US/7-aurora-ml-and-amazon-bedrock-movie-recommendations)** | 45-60 min | 🟡 Intermediate | Build a Netflix-style movie recommendation system using `aws_ml` extension |
+| **[Bedrock Knowledge Bases](https://catalog.workshops.aws/pgvector/en-US/8-bedrock-knowledge-bases)** | 45-60 min | 🟡 Intermediate | Create enterprise knowledge bases for financial documents with regulatory compliance |
+| **[Blaize Bazaar](https://catalog.workshops.aws/pgvector/en-US/9-blaize-bazaar)** | 45-60 min | 🔴 Advanced | Deploy a complete e-commerce platform with AI-powered search and recommendations |
+| **[Incident Detection & Remediation](https://catalog.workshops.aws/pgvector/en-US/10-incident-detection-and-remediation)** | 45-60 min | 🔴 Advanced | Implement intelligent database monitoring with agentic workflows and auto-remediation using MCP servers |
 
 ## 🏗️ Architecture Components
 
