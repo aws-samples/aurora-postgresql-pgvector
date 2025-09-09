@@ -1,6 +1,0 @@
-pandarallel==1.6.5
-pgvector==0.3.6
-boto3==1.36.0
-psycopg==3.2.4
-numexpr==2.10.2
-awscli==1.37.0
