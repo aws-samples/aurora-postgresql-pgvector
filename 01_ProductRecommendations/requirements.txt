@@ -1,2 +1,15 @@
-packaging==24.2
-setuptools==65.5.0
+# Minimal requirements for Bedrock Similarity Search Notebook
+# Only the absolute essentials - leverages existing SageMaker/Jupyter packages
+
+# AWS SDK for Bedrock access
+boto3>=1.34.0
+
+# PostgreSQL vector database
+psycopg>=3.1.0
+pgvector>=0.3.0
+
+# Parallel processing for faster embedding generation
+pandarallel>=1.6.0
+
+# Note: pandas, numpy, ipython, jupyter are already installed in most environments
+# Note: setuptools, packaging, and other system packages are typically pre-installed
