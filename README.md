@@ -63,7 +63,7 @@ cd aurora-postgresql-pgvector
 # Deploy infrastructure
 aws cloudformation create-stack \
   --stack-name pgvector-workshop \
-  --template-body file://cloudformation/genai-pgvector-labs.yml \
+  --template-body file://cloudformation/genai-pgvector-lab.yml \
   --capabilities CAPABILITY_IAM
 ```
 
