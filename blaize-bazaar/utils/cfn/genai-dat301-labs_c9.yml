@@ -1,0 +1,2145 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: >
+  This template sets up a complete environment for running machine learning workloads with SageMaker, storing data in Aurora PostgreSQL, and utilizing Amazon Bedrock for Gen AI capabilities. It includes necessary networking, security, and IAM configurations to ensure proper functionality and security of the deployed resources.
+
+Parameters:
+  TemplateName:
+    Type: String
+    Default: genai-dat-301-labs
+    Description: Name used for different elements created.
+
+  VpcName:
+    Default: APGPGVectorWorkshopRIV
+    Type: String
+
+  VpcCIDR:
+    Default: 10.215.0.0/16
+    Type: String
+
+  Subnet1CIDR:
+    Default: 10.215.10.0/24
+    Type: String
+
+  Subnet2CIDR:
+    Default: 10.215.20.0/24
+    Type: String
+
+  Subnet3CIDR:
+    Default: 10.215.30.0/24
+    Type: String
+
+  Subnet4CIDR:
+    Default: 10.215.40.0/24
+    Type: String
+
+  DefaultCodeRepository:
+    Default: https://github.com/aws-samples/DAT301-shayons.git
+    Type: String
+
+  DBEngineVersion:
+    Type: String
+    Default: 16.3
+    AllowedValues:
+      - 16.3
+
+  DBInstanceSize:
+    Type: String
+    Default: db.r6gd.2xlarge
+    AllowedValues:
+      - db.r6g.xlarge
+      - db.r6g.2xlarge
+      - db.r6gd.2xlarge
+      - db.r6g.4xlarge
+      - db.r6gd.4xlarge
+  
+  DBClusterIdentifier:
+    Type: String
+    Default: "apg-pgvector-RIV"
+    Description: "Identifier for the Aurora PostgreSQL DB cluster."
+
+  DBPort:
+    Description: TCP/IP Port for the Database Instance
+    Type: Number
+    Default: 5432
+    ConstraintDescription: "Must be in the range [1150-65535]"
+    MinValue: 1150
+    MaxValue: 65535
+
+  IsWorkshopStudioEnv:
+    Type: String
+    Default: "no"
+    AllowedValues:
+      - "no"
+      - "yes"
+    Description: Whether this stack is being deployed in a Workshop Studio environment or not. If not sure, leave as default of "no".
+
+  ParticipantRoleArn:
+    Type: String
+    Description: Workshop studio magic variable ParticipantRoleArn
+
+  AssetsBucketName:
+    Type: String
+    Description: Workshop studio magic variable AssetsBucketName
+
+  AssetsBucketPrefix:
+    Type: String
+    Description: Workshop studio magic variable AssetsBucketPrefix
+
+  AmiID:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Description: "The ID of the AMI."
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+
+## Conditions
+Conditions:
+  isInWS: !Equals [!Ref IsWorkshopStudioEnv, "yes"]
+  isNotInWS: !Equals [!Ref IsWorkshopStudioEnv, "no"]
+
+  isWorkshopStudio: !Equals [!Ref IsWorkshopStudioEnv, "yes"]
+
+Resources:
+  ## Create enhanced monitoring role
+  roleEnhancedMonitoring:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-monitor-${AWS::Region}
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - monitoring.rds.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
+
+  # VPC ----------------------------------------------------------
+  VPC:
+    Type: AWS::EC2::VPC
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Ref VpcName
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DeletionPolicy : Retain
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    DeletionPolicy : Retain
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+  
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt  NatGateway1EIP.AllocationId
+      SubnetId: !Ref Subnet1
+
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Private Routes
+
+  DefaultPrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  Subnet1:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs ]
+      MapPublicIpOnLaunch: true
+      CidrBlock: !Ref Subnet1CIDR
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName} (Public)
+
+  Subnet2:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs ]
+      MapPublicIpOnLaunch: true
+      CidrBlock: !Ref Subnet2CIDR
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName} (Public)
+
+  Subnet3:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Retain
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs ]
+      MapPublicIpOnLaunch: false
+      CidrBlock: !Ref Subnet3CIDR
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName} (Private)
+
+  Subnet4:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Retain
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs ]
+      MapPublicIpOnLaunch: false
+      CidrBlock: !Ref Subnet4CIDR
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName} (Private)
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Ref VpcName
+
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  Subnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet1
+
+  Subnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet2
+
+  Subnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref Subnet3
+
+  Subnet4RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref Subnet4
+
+  # END VPC ------------------------------------------------------
+
+  # NOTEBOOK -----------------------------------------------------
+  NotebookInstance:
+    Type: AWS::SageMaker::NotebookInstance
+    Properties:
+      InstanceType: "ml.c5.2xlarge"
+      RoleArn: !GetAtt ExecutionRole.Arn
+      SubnetId: !Ref Subnet1
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      DefaultCodeRepository: !Ref DefaultCodeRepository
+      VolumeSizeInGB: 50
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Notebook Instance Security Group
+      VpcId: !Ref VPC
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref DBPort
+          ToPort: !Ref DBPort
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "sagemaker.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSageMakerFullAccess
+        - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+        - arn:aws:iam::aws:policy/AmazonRDSReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonBedrockFullAccess
+      Policies:
+        - PolicyName: "s3_access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "s3:PutBucketPolicy"
+                  - "s3:DeleteBucket"
+                Resource: "arn:aws:s3:::sagemaker-*"
+
+  # END NOTEBOOK -------------------------------------------------
+
+  # RDS IAM Role for Amazon Bedrock ------------------------------
+
+  AuroraBedrockRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "Aurora-Bedrock-Role-RIV"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "rds.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "Aurora-Bedrock-Policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "bedrock:InvokeModel"
+                Resource:
+                  [
+                    !Sub "arn:aws:bedrock:*:${AWS::AccountId}:provisioned-model/*",
+                    "arn:aws:bedrock:*::foundation-model/*",
+                  ]
+
+  # END RDS IAM Role for Amazon Bedrock ------------------------------
+
+  # Aurora PostgreSQL -----------------------------------------------
+
+  EncryptionKey:
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Type: AWS::KMS::Key
+    Properties:
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: !Ref AWS::StackName
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+
+  EncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${AWS::StackName}"
+      TargetKeyId: !Ref EncryptionKey
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "RDS DB Subnet Group"
+      SubnetIds: [!Ref Subnet3, !Ref Subnet4]
+
+  ## Create parameter groups for DB cluster
+  apgcustomclusterparamgroup:
+    Type: AWS::RDS::DBClusterParameterGroup
+    Properties:
+      Description: "Aurora PostgreSQL Custom Cluster parameter group"
+      Family: aurora-postgresql16
+      Parameters:
+        shared_preload_libraries: "pg_stat_statements"
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-clusterparamgroup"
+
+  ## Create parameter groups for cluster nodes
+  apgcustomdbparamgroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: !Sub ${AWS::StackName}-dbparamgroup
+      Family: aurora-postgresql16
+      Parameters:
+        log_rotation_age: "1440"
+        log_rotation_size: "102400"
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-dbparamgroup
+
+  RDSSecrets:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Name: !Sub "apg-pgvector-secret-RIV"
+      Description: "This is the secret for Aurora cluster"
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "postgres", "database": "postgres" }'
+        GenerateStringKey: "password"
+        PasswordLength: 16
+        ExcludePunctuation: true
+    
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Lambda functions
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCIDR
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: "0.0.0.0/0"
+
+  VPCSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    DeletionPolicy: Retain
+    DependsOn: VPC
+    Properties:
+      GroupDescription: !Ref "AWS::StackName"
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: "0.0.0.0/0"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref DBPort
+          ToPort: !Ref DBPort
+          CidrIp: !Ref VpcCIDR
+          Description: "Access to AppServer Host Security Group"
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          SourceSecurityGroupId: !Ref SecurityGroup
+          Description: "Allow all traffic from SageMaker notebook security group"
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-DBSecurityGroup"
+
+  ## Create Aurora cluster
+  DBCluster:
+    Type: AWS::RDS::DBCluster
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    DependsOn: 
+    - DBSubnetGroup
+    - VPCSecurityGroup
+    Properties:
+      DBClusterIdentifier: !Ref DBClusterIdentifier
+      Engine: aurora-postgresql
+      Port: !Ref DBPort
+      MasterUsername:
+        !Join [
+          "",
+          [
+            "{{resolve:secretsmanager:",
+            !Ref RDSSecrets,
+            ":SecretString:username}}",
+          ],
+        ]
+      MasterUserPassword:
+        !Join [
+          "",
+          [
+            "{{resolve:secretsmanager:",
+            !Ref RDSSecrets,
+            ":SecretString:password}}",
+          ],
+        ]
+      DBClusterParameterGroupName: !Ref apgcustomclusterparamgroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      AutoMinorVersionUpgrade: true
+      EnableHttpEndpoint: true
+      EngineVersion: "16.3"
+      KmsKeyId: !Ref EncryptionKey
+      StorageEncrypted: true
+      StorageType: aurora-iopt1
+      BackupRetentionPeriod: 7
+      DeletionProtection: false
+      VpcSecurityGroupIds: [!Ref VPCSecurityGroup]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}"
+
+  ## Deploy the first cluster node (always the writer)
+  DBNodeWriter:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    DependsOn: DBCluster
+    Properties:
+      DBClusterIdentifier: !Ref DBCluster
+      DBInstanceIdentifier: !Sub ${AWS::StackName}-node-01
+      CopyTagsToSnapshot: true
+      DBInstanceClass: !Ref DBInstanceSize
+      DBParameterGroupName: !Ref apgcustomdbparamgroup
+      Engine: aurora-postgresql
+      MonitoringInterval: 1
+      MonitoringRoleArn: !GetAtt roleEnhancedMonitoring.Arn
+      PubliclyAccessible: true
+      EnablePerformanceInsights: true
+      PerformanceInsightsRetentionPeriod: 7
+      AutoMinorVersionUpgrade: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-node-01
+
+  # Deploy the reader node
+  DBNodeReader:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    DependsOn: DBNodeWriter
+    Properties:
+      DBClusterIdentifier: !Ref DBCluster
+      DBInstanceIdentifier: !Sub ${AWS::StackName}-node-02
+      CopyTagsToSnapshot: true
+      DBInstanceClass: !Ref DBInstanceSize
+      DBParameterGroupName: !Ref apgcustomdbparamgroup
+      Engine: aurora-postgresql
+      MonitoringInterval: 1
+      MonitoringRoleArn: !GetAtt roleEnhancedMonitoring.Arn
+      PubliclyAccessible: true
+      EnablePerformanceInsights: true
+      PerformanceInsightsRetentionPeriod: 7
+      AutoMinorVersionUpgrade: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-node-02
+
+  SecretPostgreSQLAttachment:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      SecretId: !Ref RDSSecrets
+      TargetId: !Ref DBCluster
+      TargetType: AWS::RDS::DBCluster
+
+  # end Aurora PostgreSQL -----------------------------------------------
+
+  # Start Bootstrap Aurora PostgreSQL -----------------------------------
+  PsycopgLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: psycopg-layer
+      Description: Psycopg layer with binary and pool extensions
+      Content:
+        S3Bucket: dat301-psycopg-layer
+        S3Key: psycopg-layer.zip
+      CompatibleRuntimes:
+        - python3.11
+
+  LambdaBootstrapRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+        - "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
+        - "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
+      Policies:
+        - PolicyName: LambdaRDSAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rds-data:ExecuteStatement
+                  - secretsmanager:GetSecretValue
+                  - "cloudformation:SignalResource"
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+      Description: IAM role to provide needed permission for Lambda function to Bootstrap Aurora PostgreSQL
+
+  LambdaLG:
+    Type: AWS::Logs::LogGroup
+    DependsOn: LambdaBootstrapFunction
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/BootstrapAurora-${AWS::StackName}"
+      RetentionInDays: 7
+
+  # IAM Role for the Lambda function
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CloudWatchLogsAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+
+  LambdaBootstrapFunction:
+    Type: AWS::Lambda::Function
+    DeletionPolicy: Retain
+    DependsOn: 
+      - DBCluster
+      - rSG
+      - Subnet3
+      - Subnet4
+    Properties:
+      FunctionName: !Sub "BootstrapAurora-${AWS::StackName}"
+      Description: Run SQL Scripts on Aurora PostgreSQL Database using AWS Lambda function
+      Layers:
+        - !Ref PsycopgLayer
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaBootstrapRole.Arn
+      Runtime: python3.11
+      MemorySize: 2048
+      Timeout: 900
+      Environment:
+        Variables:
+          DBSECRET: !Ref RDSSecrets
+      Code:
+        ZipFile: |
+          import asyncio
+          import psycopg
+          import os
+          import boto3
+          import json
+          import logging
+          import cfnresponse
+          
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          
+          async def create_schema_and_table(event, context):
+              logger.info('Starting create_schema_and_table')
+              
+              try:
+                  client = boto3.client('secretsmanager', region_name='us-west-2')
+                  secret_name = os.environ.get('DBSECRET')
+                  secret_value = client.get_secret_value(SecretId=secret_name)
+                  secret = json.loads(secret_value['SecretString'])
+                  uname = secret['username']
+                  userpwd = secret['password']
+                  dbname = secret.get('dbname', 'postgres')
+                  port = secret.get('port', 5432)
+                  endpoint = secret['host']
+                  
+                  async with await psycopg.AsyncConnection.connect(f"host={endpoint} dbname={dbname} user={uname} password={userpwd} port={port} connect_timeout=30") as aconn:
+                      async with aconn.cursor() as acur:
+                          await acur.execute("CREATE SCHEMA IF NOT EXISTS bedrock_integration;")
+                          await acur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+                          await acur.execute("""
+                          CREATE TABLE IF NOT EXISTS bedrock_integration.bedrock_kb (
+                          id uuid PRIMARY KEY,
+                          embedding vector(1024),
+                          chunks text,
+                          metadata json
+                          );
+                          """)
+
+                          await acur.execute("""
+                          CREATE INDEX ON bedrock_integration.bedrock_kb USING hnsw (embedding vector_cosine_ops) WITH (ef_construction=64);
+                          """)
+          
+                          await aconn.commit()
+                  
+                  logger.info('bedrock_integration schema and bedrock_kb table created successfully')
+              except Exception as e:
+                  logger.error('Error creating schema and table')
+                  print('Exception: ' + str(e))
+          
+          def lambda_handler(event, context):
+              logger.info('Starting lambda_handler')
+              print(event)
+              print(context)
+    
+              try:
+                  request_type = event.get('RequestType')
+
+                  if request_type == 'Create':
+                      logger.info('Handling Create request')
+                      asyncio.get_event_loop().run_until_complete(create_schema_and_table(event, context))
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {"Message": "Schema and table created successfully"})
+                  elif request_type == 'Update':
+                      logger.info('Handling Update request')
+                      # Implement update logic if needed
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {"Message": "Update completed"})
+                  elif request_type == 'Delete':
+                      logger.info('Handling Delete request')
+                      # No action needed for delete, just send a success response
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {"Message": "Delete completed"})
+                  else:
+                      logger.error(f"Invalid request type: {request_type}")
+                      cfnresponse.send(event, context, cfnresponse.FAILED, {"Error": f"Invalid request type: {request_type}"})
+              except Exception as e:
+                  logger.error(f"Error: {str(e)}")
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {"Error": str(e)})
+
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt rSG.GroupId
+        SubnetIds:
+          - !GetAtt Subnet3.SubnetId
+          - !GetAtt Subnet4.SubnetId
+
+  CustomResource:
+    Type: Custom::DBBootstrap
+    DeletionPolicy: Retain
+    DependsOn:
+      - DBNodeWriter
+      - DBNodeReader
+      - LambdaBootstrapFunction
+    Properties:
+      ServiceToken: !GetAtt LambdaBootstrapFunction.Arn
+
+  rSG:
+    Type: "AWS::EC2::SecurityGroup"
+    DeletionPolicy: Retain
+    DependsOn: VPC
+    Properties:
+      GroupDescription: Security group for Lambda which will execute the post database creation steps
+      GroupName: post_lambda_sg
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref VPCSecurityGroup
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      VpcId: !Ref VPC
+
+  # End Bootstrap Aurora PostgreSQL -------------------------------------
+  DBInitializationCheckFunction:
+    Type: AWS::Lambda::Function
+    DeletionPolicy: Retain
+    DependsOn:
+      - LambdaBootstrapFunction
+      - DBNodeWriter
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaBootstrapRole.Arn
+      Layers:
+        - !Ref PsycopgLayer
+      Runtime: python3.11
+      Timeout: 900
+      MemorySize: 2048
+      Environment:
+        Variables:
+          DBSECRET: !Ref RDSSecrets
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt rSG.GroupId
+        SubnetIds:
+          - !Ref Subnet3
+          - !Ref Subnet4
+      Code:
+        ZipFile: |
+          import asyncio
+          import boto3
+          import time
+          import psycopg
+          import logging
+          import cfnresponse
+          import json
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          async def initialize_database(secret_dict):
+              host = secret_dict['host']
+              user = secret_dict['username']
+              password = secret_dict['password']
+              dbname = secret_dict.get('dbname', 'postgres')
+
+              max_attempts = 30
+              for attempt in range(max_attempts):
+                  try:
+                      async with await psycopg.AsyncConnection.connect(
+                          host=host,
+                          user=user,
+                          password=password,
+                          dbname=dbname,
+                          connect_timeout=10
+                      ) as aconn:
+                          async with aconn.cursor() as acur:
+                              # Create schema, extension, table, and index
+                              await acur.execute("CREATE SCHEMA IF NOT EXISTS bedrock_integration;")
+                              await acur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+                              await acur.execute("""
+                              CREATE TABLE IF NOT EXISTS bedrock_integration.bedrock_kb (
+                              id uuid PRIMARY KEY,
+                              embedding vector(1024),
+                              chunks text,
+                              metadata json
+                              );
+                              """)
+                              await acur.execute("""
+                              CREATE INDEX IF NOT EXISTS bedrock_kb_embedding_idx 
+                              ON bedrock_integration.bedrock_kb 
+                              USING hnsw (embedding vector_cosine_ops) 
+                              WITH (ef_construction=256);
+                              """)
+                              await aconn.commit()
+
+                              # Verify table exists and is accessible
+                              await acur.execute("SELECT COUNT(*) FROM bedrock_integration.bedrock_kb")
+                              count = await acur.fetchone()
+                              logger.info(f"bedrock_integration.bedrock_kb table exists and contains {count[0]} rows")
+                              return True
+                  except psycopg.Error as e:
+                      logger.warning(f"Attempt {attempt + 1}/{max_attempts} failed: {str(e)}")
+                      if attempt < max_attempts - 1:
+                          await asyncio.sleep(10)
+                      else:
+                          logger.error("Max attempts reached. Unable to initialize database.")
+                          return False
+
+          def lambda_handler(event, context):
+              logger.info('Starting lambda_handler')
+              logger.info(f"Received event: {event}")
+
+              try:
+                  if event['RequestType'] in ['Create', 'Update']:
+                      secret_name = event['ResourceProperties']['DBSecret']
+                      secret_client = boto3.client('secretsmanager')
+                      secret = secret_client.get_secret_value(SecretId=secret_name)
+                      secret_dict = json.loads(secret['SecretString'])
+
+                      success = asyncio.get_event_loop().run_until_complete(initialize_database(secret_dict))
+                      if success:
+                          cfnresponse.send(event, context, cfnresponse.SUCCESS, {"Message": "Database initialization completed successfully"})
+                      else:
+                          cfnresponse.send(event, context, cfnresponse.FAILED, {"Message": "Database initialization failed"})
+                  elif event['RequestType'] == 'Delete':
+                      # No action needed on delete
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {"Message": "No action needed for Delete"})
+                  else:
+                      cfnresponse.send(event, context, cfnresponse.FAILED, {"Message": f"Unsupported request type: {event['RequestType']}"})
+              except Exception as e:
+                  logger.error(f"Error in lambda_handler: {str(e)}")
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {"Message": f"Error: {str(e)}"})
+  
+  DBInitializationCheck:
+    Type: Custom::DBInitializationCheck
+    DeletionPolicy: Retain
+    DependsOn:
+      - CustomResource
+      - DBNodeWriter
+      - DBNodeReader
+      - DBInitializationCheckFunction
+    Properties:
+      ServiceToken: !GetAtt DBInitializationCheckFunction.Arn
+      DBSecret: !Ref RDSSecrets
+
+  DBInitializationCheckRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: DBInitializationCheckPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - rds:DescribeDBClusters
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DeleteNetworkInterface
+                Resource: "*"
+
+  # begin Cloud9-----------------------------------------------
+  # Cloud9 SSM Instance Profile and Role
+  # AWSCloud9SSMInstanceProfile:
+  #   Type: AWS::IAM::InstanceProfile
+  #   Properties:
+  #     InstanceProfileName: AWSCloud9SSMInstanceProfile
+  #     Path: /cloud9/
+  #     Roles: 
+  #       - !Ref AWSCloud9SSMAccessRole
+
+  AWSCloud9SSMAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: AWSCloud9SSMAccessRole
+      Path: /service-role/
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+                - cloud9.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCloud9SSMInstanceProfile
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  # Update Cloud9 Instance to use SSM Instance Profile
+  Cloud9Instance:
+    Type: AWS::Cloud9::EnvironmentEC2
+    Properties:
+      Name: !Sub ${TemplateName}-Cloud9-IDE
+      Description: !Sub ${TemplateName} - Cloud9 IDE to support Generative AI with pgvector labs
+      AutomaticStopTimeMinutes: 240
+      SubnetId: !Ref Subnet1
+      InstanceType: m5.8xlarge
+      ImageId: amazonlinux-2-x86_64
+      ConnectionType: CONNECT_SSM
+      OwnerArn: 
+        Fn::If: 
+          - isWorkshopStudio
+          - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/WSParticipantRole/Participant'
+          - !Ref "AWS::NoValue"
+      Tags:
+        - Key: SSMBootstrap
+          Value: Active
+        - Key: Environment
+          Value: Cloud9 IDE to support Generative AI with pgvector labs
+
+  # SSM Document for bootstrapping
+  C9Bootstrap:
+    Type: AWS::SSM::Document
+    DependsOn:
+      - Cloud9Instance
+      - DBNodeWriter
+      - DBNodeReader
+    Properties:
+      Name: !Sub ${TemplateName}-C9Bootstrap
+      Tags:
+        - Key: Environment
+          Value: Generative AI use cases with Aurora PostgreSQL and pgvector event
+      DocumentType: Command
+      Content:
+        schemaVersion: '2.2'
+        description: !Sub ${TemplateName} - Bootstrap cloud9 for installing required libraries
+        mainSteps:
+        - action: aws:runShellScript
+          name: BootstrapTools
+          inputs:
+            runCommand:
+              - |
+                #!/bin/bash
+                set -e
+
+                # Enable error handling
+                trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
+                trap 'echo "\"${last_command}\" command failed with exit code $?."' EXIT
+
+                # Set up logging to both /tmp and CloudWatch
+                exec 1> >(tee /tmp/bootstrap.log | logger -t bootstrap)
+                exec 2>&1
+
+                echo "Starting bootstrap process at $(date)"
+                echo "Current working directory: $(pwd)"
+                echo "Running as user: $(whoami)"
+               
+                # Ensure we're in the right directory with proper ownership
+                cd /home/ec2-user/environment || {
+                    echo "Failed to change to /home/ec2-user/environment"
+                    exit 1
+                }
+
+                # Download prereq.sh as ec2-user
+                echo "Downloading prereq.sh..."
+                if ! wget https://raw.githubusercontent.com/aws-samples/DAT301-shayons/refs/heads/main/utils/prereq.sh; then
+                    echo "Failed to download prereq.sh"
+                    exit 1
+                fi
+
+                echo "Setting correct ownership and permissions..."
+                chown ec2-user:ec2-user prereq.sh
+                chmod 755 prereq.sh
+
+                echo "Executing prereq.sh as ec2-user..."
+                if ! runuser -l ec2-user -c 'cd /home/ec2-user/environment && ./prereq.sh'; then
+                    echo "Failed to execute prereq.sh"
+                    exit 1
+                fi
+               
+                echo "Bootstrap completed at $(date) with return code $?"
+               
+                # Disable error traps
+                trap - DEBUG
+                trap - EXIT
+
+  # SSM Association
+  C9BootstrapAssociation:
+    Type: AWS::SSM::Association
+    Properties:
+      Name: !Ref C9Bootstrap
+      OutputLocation:
+        S3Location:
+          OutputS3BucketName: !Ref C9OutputBucket
+          OutputS3KeyPrefix: !Sub ${TemplateName}-bootstrapoutput
+      Targets:
+        - Key: tag:SSMBootstrap
+          Values:
+          - Active
+
+  # S3 Bucket for bootstrap output
+  C9OutputBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+
+  # IAM Role for Cloud9
+  C9Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${TemplateName}-C9Role
+      Tags:
+        - Key: Environment
+          Value: !Sub ${TemplateName} - Generative AI use cases with Aurora PostgreSQL and pgvector event
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+            - ssm.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AdministratorAccess
+      Path: "/"
+      Policies:
+        - PolicyName: SecretsManagerAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: "*"
+        - PolicyName: RDSAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rds:DescribeDBClusterEndpoints
+                Resource: "*"
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:PutObject
+                  - s3:PutObjectAcl
+                  - s3:GetBucketLocation
+                  - s3:ListAllMyBuckets
+                  - s3:GetObject
+                Resource:
+                  - !Sub arn:aws:s3:::genai-pgv-labs-${AWS::AccountId}
+                  - !Sub arn:aws:s3:::genai-pgv-labs-${AWS::AccountId}/*
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: "*"
+
+  # Instance Profile for Cloud9
+  C9InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub ${TemplateName}-C9InstanceProfile
+      Path: "/"
+      Roles:
+      - Ref: C9Role
+
+  # Lambda Execution Role for Cloud9 Bootstrap
+  C9LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${TemplateName}-C9LambdaExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: C9LambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - cloudformation:DescribeStacks
+            - cloudformation:DescribeStackEvents
+            - cloudformation:DescribeStackResource
+            - cloudformation:DescribeStackResources
+            - ec2:DescribeInstances
+            - ec2:DescribeInstanceStatus
+            - ec2:AssociateIamInstanceProfile
+            - ec2:ModifyInstanceAttribute
+            - ec2:ReplaceIamInstanceProfileAssociation
+            - ec2:DescribeIamInstanceProfileAssociations
+            - ec2:DisassociateIamInstanceProfile
+            - iam:ListInstanceProfiles
+            - ssm:SendCommand
+            - ssm:GetCommandInvocation
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - iam:PassRole
+            Resource: !GetAtt C9Role.Arn
+
+  # Custom Resource for Cloud9 Bootstrap
+  C9BootstrapInstanceLambda:
+    Type: Custom::C9BootstrapInstanceLambda
+    DependsOn:
+      - C9LambdaExecutionRole
+    Properties:
+      Tags:
+        - Key: Environment
+          Value: Generative AI use cases with Aurora PostgreSQL and pgvector event
+      ServiceToken:
+        Fn::GetAtt:
+        - C9BootstrapInstanceLambdaFunction
+        - Arn
+      REGION:
+        Ref: AWS::Region
+      StackName:
+        Ref: AWS::StackName
+      EnvironmentId:
+        Ref: Cloud9Instance
+      LabIdeInstanceProfileName:
+        Ref: C9InstanceProfile
+      LabIdeInstanceProfileArn:
+        Fn::GetAtt:
+        - C9InstanceProfile
+        - Arn
+
+  # Lambda Function for Cloud9 Bootstrap
+  C9BootstrapInstanceLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Tags:
+        - Key: Environment
+          Value: Generative AI use cases with Aurora PostgreSQL and pgvector event
+      Handler: index.lambda_handler
+      Role:
+        Fn::GetAtt:
+        - C9LambdaExecutionRole
+        - Arn
+      Runtime: python3.11
+      MemorySize: 2056
+      Timeout: '900'
+      Code:
+        ZipFile: |
+          from __future__ import print_function
+          import boto3
+          import json
+          import os
+          import time
+          import traceback
+          import cfnresponse
+          import logging
+  
+          def lambda_handler(event, context):
+              print('event: {}'.format(event))
+              print('context: {}'.format(context))
+              responseData = {}
+
+              if event['RequestType'] == 'Create':
+                  try:
+                      # Open AWS clients
+                      ec2 = boto3.client('ec2')
+
+                      # Construct the Cloud9 instance name
+                      cloud9_instance_name = 'aws-cloud9-{}-Cloud9-IDE-{}'.format(
+                          event['ResourceProperties']['StackName'],
+                          event['ResourceProperties']['EnvironmentId']
+                      )
+                      print('Looking for instance with name: {}'.format(cloud9_instance_name))
+
+                      # Add retry logic for instance lookup
+                      max_retries = 10
+                      retry_delay = 30
+                      instance = None
+
+                      for attempt in range(max_retries):
+                          try:
+                              response = ec2.describe_instances(
+                                  Filters=[{
+                                      'Name': 'tag:Name',
+                                      'Values': [cloud9_instance_name]
+                                  }]
+                              )
+
+                              if response['Reservations'] and response['Reservations'][0]['Instances']:
+                                   instance = response['Reservations'][0]['Instances'][0]
+                                   break
+
+                              print(f"Attempt {attempt + 1}: Instance not found, waiting {retry_delay} seconds...")
+                              time.sleep(retry_delay)
+                          except Exception as e:
+                              print(f"Error on attempt {attempt + 1}: {str(e)}")
+                              if attempt == max_retries - 1:
+                                  raise
+                              time.sleep(retry_delay)
+
+                      if not instance:
+                          raise Exception(f"Cloud9 instance '{cloud9_instance_name}' not found after {max_retries} attempts")
+
+                      # Create the IamInstanceProfile request object
+                      iam_instance_profile = {
+                          'Arn': event['ResourceProperties']['LabIdeInstanceProfileArn'],
+                          'Name': event['ResourceProperties']['LabIdeInstanceProfileName']
+                      }
+                      print('iam_instance_profile: {}'.format(iam_instance_profile))
+
+                      # Wait for Instance to become ready
+                      waiter = ec2.get_waiter('instance_running')
+                      waiter.wait(
+                          InstanceIds=[instance['InstanceId']],
+                          WaiterConfig={'Delay': 15, 'MaxAttempts': 40}
+                      )
+
+                      # Check existing profile associations
+                      desc_profile = ec2.describe_iam_instance_profile_associations(
+                          Filters=[{'Name': 'instance-id', 'Values': [instance['InstanceId']]}]
+                      )
+
+                      if desc_profile["IamInstanceProfileAssociations"]:
+                          print("Removing existing role association")
+                          ec2.disassociate_iam_instance_profile(
+                              AssociationId=desc_profile["IamInstanceProfileAssociations"][0]["AssociationId"]
+                          )
+                          # Add small delay after disassociation
+                          time.sleep(5)
+
+                      # Attach new instance profile
+                      response = ec2.associate_iam_instance_profile(
+                          IamInstanceProfile=iam_instance_profile,
+                          InstanceId=instance['InstanceId']
+                      )
+                      print('Profile association response: {}'.format(response))
+
+                      responseData = {
+                          'Success': 'Started bootstrapping for instance: ' + instance['InstanceId'],
+                          'InstanceId': instance['InstanceId']
+                      }
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, 'CustomResourcePhysicalID')
+
+                  except Exception as e:
+                      print('Exception occurred: {}'.format(str(e)))
+                      traceback_str = traceback.format_exc()
+                      print('Traceback: {}'.format(traceback_str))
+                      responseData = {'Error': str(e)}
+                      cfnresponse.send(event, context, cfnresponse.FAILED, responseData, 'CustomResourcePhysicalID')
+              else:
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, 'CustomResourcePhysicalID')
+  # end Cloud9 -----------------------------------------------
+
+  # end Cloud9 -----------------------------------------------
+
+  # Creating bucket for loading Knowledge Base for Bedrock
+  BedrockKB:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub "knowledgebase-${AWS::AccountId}"
+
+  S3VPCEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    DependsOn: VPC
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: "*"
+            Effect: Allow
+            Resource: "*"
+            Principal: "*"
+      RouteTableIds:
+        - !Ref RouteTable
+      ServiceName: !Join
+        - ""
+        - - com.amazonaws.
+          - !Ref "AWS::Region"
+          - .s3
+      VpcId: !Ref VPC
+
+  # end of S3 Bucket
+
+  # Bedrock Agent
+
+  BedrockPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          Effect: Allow
+          Action: [bedrock:*, secretsmanager:*]
+          Resource: "*"
+
+  AmazonBedrockExecutionRoleForAgents:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AWSLambda_FullAccess
+        - arn:aws:iam::aws:policy/AmazonBedrockFullAccess
+        - arn:aws:iam::aws:policy/AmazonRDSFullAccess
+        - arn:aws:iam::aws:policy/AmazonRDSDataFullAccess
+        - !Ref BedrockPolicy
+      RoleName: !Sub "${AWS::StackName}-AmazonBedrockExecutionRoleForAgents"
+
+  LambdaBasicExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:*
+                Resource: "*"
+        - PolicyName: AWSLambdaBasicExecutionRole
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+
+  BedrockAgentActionLambda:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - DBInitializationCheckFunction
+    Properties:
+      Handler: index.lambda_handler
+      FunctionName: !Sub "${AWS::StackName}_BedrockAgent_Lambda"
+      Description: "Contains API calls for DAT301 for Bedrock Agent"
+      Layers:
+        - !Ref PsycopgLayer
+      Timeout: 600
+      Role: !GetAtt "LambdaBasicExecutionRole.Arn"
+      Runtime: python3.11
+      Environment:
+        Variables:
+          DB_HOST: !GetAtt DBCluster.Endpoint.Address
+          DB_NAME: postgres
+          DB_USER:
+            !Join [
+              "",
+              [
+                "{{resolve:secretsmanager:",
+                !Ref RDSSecrets,
+                ":SecretString:username}}",
+              ],
+            ]
+          DB_PASSWORD:
+            !Join [
+              "",
+              [
+                "{{resolve:secretsmanager:",
+                !Ref RDSSecrets,
+                ":SecretString:password}}",
+              ],
+            ]
+      Code:
+        ZipFile: |
+          import json
+          import os
+          import asyncio
+          import psycopg
+          from psycopg.rows import dict_row
+          from decimal import Decimal
+
+          # Database connection parameters
+          DB_HOST = os.environ['DB_HOST']
+          DB_NAME = os.environ['DB_NAME']
+          DB_USER = os.environ['DB_USER']
+          DB_PASSWORD = os.environ['DB_PASSWORD']
+
+          # Custom JSON encoder to handle Decimal
+          class DecimalEncoder(json.JSONEncoder):
+              def default(self, obj):
+                  if isinstance(obj, Decimal):
+                      return float(obj)
+                  return super(DecimalEncoder, self).default(obj)
+
+          async def get_products_inventory():
+              async with await psycopg.AsyncConnection.connect(
+                  f"host={DB_HOST} dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD}",
+                  row_factory=dict_row
+              ) as aconn:
+                  async with aconn.cursor() as acur:
+                      await acur.execute("SELECT \"productId\", LEFT(product_description,100), stars, reviews, price, isBestSeller, boughtInLastMonth, category_name, quantity FROM bedrock_integration.product_catalog where quantity in (0, 1, 2, 3, 25, 70, 90) ORDER BY \"productId\" LIMIT 20;")
+                      return await acur.fetchall()
+
+          async def get_product_price(productId):
+              async with await psycopg.AsyncConnection.connect(
+                  f"host={DB_HOST} dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD}",
+                  row_factory=dict_row
+              ) as aconn:
+                  async with aconn.cursor() as acur:
+                      await acur.execute(
+                          "SELECT \"productId\", product_description, price FROM bedrock_integration.product_catalog WHERE \"productId\" = %s;",
+                          (productId,)
+                      )
+                      return await acur.fetchone()
+
+          async def restock_product(productId, quantity):
+              async with await psycopg.AsyncConnection.connect(
+                  f"host={DB_HOST} dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD}",
+                  row_factory=dict_row
+              ) as aconn:
+                  async with aconn.cursor() as acur:
+                      try:
+                          # First, check if the product exists
+                          await acur.execute(
+                              "SELECT \"productId\", quantity FROM bedrock_integration.product_catalog WHERE \"productId\" = %s;",
+                              (productId,)
+                          )
+                          product = await acur.fetchone()
+                          
+                          if not product:
+                              return {"status": "Failure", "error": f"Product with ID {productId} not found"}
+                          
+                          # Update the quantity
+                          await acur.execute(
+                              "UPDATE bedrock_integration.product_catalog SET quantity = quantity + %s WHERE \"productId\" = %s RETURNING \"productId\", quantity;",
+                              (quantity, productId)
+                          )
+                          result = await acur.fetchone()
+                          
+                          if result:
+                              await aconn.commit()
+                              return {"status": "Success", "productId": result['productId'], "newQuantity": result['quantity']}
+                          else:
+                              await aconn.rollback()
+                              return {"status": "Failure", "error": "Update operation did not return a result"}
+                      except Exception as e:
+                          await aconn.rollback()
+                          print(f"Error restocking product: {str(e)}")
+                          return {"status": "Failure", "error": str(e)}
+
+          async def async_handler(event, context):
+              print("Received event: " + json.dumps(event))
+              
+              # Use get() method with a default value to avoid KeyError
+              api_path = event.get('apiPath', '/UnknownPath')
+              
+              if api_path == "/GetProductsInventory":
+                  try:
+                      response_data = await get_products_inventory()
+                  except Exception as e:
+                      print(f"Error querying database: {str(e)}")
+                      response_data = {"error": "Failed to retrieve product inventory"}
+              
+              elif api_path == "/GetProductPrice":
+                  print(f"Processing GetProductPrice request. Full event: {json.dumps(event)}")
+                  try:
+                      productId = None
+                      if event.get('queryStringParameters'):
+                          productId = event['queryStringParameters'].get('productId')
+                      if not productId and event.get('body'):
+                          body = json.loads(event['body'])
+                          productId = body.get('productId')
+                              
+                      print(f"Extracted productId: {productId}")
+                              
+                      if not productId:
+                          print("productId not found in request")
+                          response_data = {"error": "Missing productId parameter"}
+                      else:
+                          response_data = await get_product_price(productId)
+                          print(f"get_product_price result: {json.dumps(response_data, cls=DecimalEncoder)}")
+                  except json.JSONDecodeError as je:
+                      print(f"JSON Decode Error: {str(je)}")
+                      response_data = {"error": "Invalid request format"}
+                  except Exception as e:
+                      print(f"Error processing GetProductPrice request: {str(e)}")
+                      response_data = {"error": "Failed to retrieve product price"}
+                      
+              elif api_path == "/RestockProduct":
+                  print(f"Processing RestockProduct request. Full event: {json.dumps(event)}")
+                  try:
+                      # Extract parameters from requestBody
+                      request_body = event.get('requestBody', {})
+                      content = request_body.get('content', {})
+                      json_content = content.get('application/json', {})
+                      properties = json_content.get('properties', [])
+                  
+                      print(f"Properties: {properties}")
+                  
+                      # Convert the list of dictionaries to a single dictionary
+                      params = {item['name']: item['value'] for item in properties if 'name' in item and 'value' in item}
+                  
+                      print(f"Extracted params: {params}")
+                  
+                      # Get productId and quantity
+                      productId = params.get('productId')
+                      quantity = params.get('quantity')
+                  
+                      print(f"Extracted parameters: productId={productId}, quantity={quantity}")
+                  
+                      if not productId:
+                          raise ValueError("Missing productId parameter")
+                      if quantity is None:
+                          raise ValueError("Missing quantity parameter")
+                  
+                      try:
+                          quantity = int(quantity)
+                      except ValueError:
+                          raise ValueError(f"Invalid quantity: '{quantity}' is not an integer")
+                  
+                      if quantity <= 0:
+                          raise ValueError("Quantity must be a positive integer")
+                  
+                      response_data = await restock_product(productId, quantity)
+                      print(f"restock_product result: {json.dumps(response_data, cls=DecimalEncoder)}")
+                  except ValueError as ve:
+                      print(f"Validation error: {str(ve)}")
+                      response_data = {"error": str(ve)}
+                  except Exception as e:
+                      print(f"Error processing RestockProduct request: {str(e)}")
+                      response_data = {"error": f"Failed to restock product: {str(e)}"}
+              else:
+                  response_data = {"message": f"Unknown API Path: {api_path}"}
+
+              response_body = {
+                  'application/json': {
+                      'body': json.dumps(response_data, cls=DecimalEncoder)
+                  }
+              }
+              
+              action_response = {
+                  'actionGroup': event.get('actionGroup', 'UnknownActionGroup'),
+                  'apiPath': api_path,
+                  'httpMethod': event.get('httpMethod', 'GET'),
+                  'httpStatusCode': 200,
+                  'responseBody': response_body
+              }
+              
+              session_attributes = event.get('sessionAttributes', {})
+              prompt_session_attributes = event.get('promptSessionAttributes', {})
+              
+              api_response = {
+                  'messageVersion': '1.0', 
+                  'response': action_response,
+                  'sessionAttributes': session_attributes,
+                  'promptSessionAttributes': prompt_session_attributes
+              }
+              
+              print("Returning API response: " + json.dumps(api_response, cls=DecimalEncoder))
+                  
+              return api_response
+
+          def lambda_handler(event, context):
+              return asyncio.get_event_loop().run_until_complete(async_handler(event, context))
+
+  AmazonBedrockAgentKnowledgebase:
+    Type: AWS::Bedrock::KnowledgeBase
+    DependsOn:
+      - DBInitializationCheck
+    Properties:
+      Description: Bedrock Agent Knowledgebase for DAT301
+      KnowledgeBaseConfiguration:
+        Type: VECTOR
+        VectorKnowledgeBaseConfiguration:
+          EmbeddingModelArn: !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/amazon.titan-embed-text-v2:0"
+          EmbeddingModelConfiguration:
+            BedrockEmbeddingModelConfiguration:
+              Dimensions: 1024
+      Name: !Sub "${AWS::StackName}-agent-kb"
+      RoleArn: !GetAtt AmazonBedrockExecutionRoleForAgents.Arn
+      StorageConfiguration:
+        Type: RDS
+        RdsConfiguration:
+          ResourceArn: !Sub "arn:${AWS::Partition}:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBCluster}"
+          CredentialsSecretArn: !Ref RDSSecrets
+          DatabaseName: "postgres"
+          TableName: "bedrock_integration.bedrock_kb"
+          FieldMapping:
+            MetadataField: "metadata"
+            PrimaryKeyField: "id"
+            TextField: "chunks"
+            VectorField: "embedding"
+
+  AmazonBedrockAgentDatasource:
+    Type: AWS::Bedrock::DataSource
+    DependsOn:
+      - AmazonBedrockAgentKnowledgebase
+    Properties:
+      DataDeletionPolicy: DELETE
+      DataSourceConfiguration:
+        Type: S3
+        S3Configuration:
+          BucketArn: !GetAtt BedrockKB.Arn
+          BucketOwnerAccountId: !Sub "${AWS::AccountId}"
+      Description: "Datasource for Bedrock Agent"
+      KnowledgeBaseId: !GetAtt AmazonBedrockAgentKnowledgebase.KnowledgeBaseId
+      Name: !Sub "bedrock-ds-${AWS::StackName}"
+
+  AmazonBedrockAgent:
+    Type: AWS::Bedrock::Agent
+    DependsOn:
+      - AmazonBedrockAgentDatasource
+      - BedrockAgentActionLambda
+    Properties:
+      AgentName: !Sub "${AWS::StackName}-dat-301-agent"
+      ActionGroups:
+        - ActionGroupName: !Sub "${AWS::StackName}-dat-301-agent"
+          Description: "DAT-301-Agent"
+          ActionGroupExecutor:
+            Lambda: !GetAtt BedrockAgentActionLambda.Arn
+          ApiSchema:
+            Payload: | 
+              {
+                "openapi": "3.0.0",
+                "info": {
+                  "title": "Blaize Bazaar",
+                  "version": "1.0.0",
+                  "description": "APIs for managing product inventory"
+                },
+                "paths": {
+                  "/GetProductsInventory": {
+                    "get": {
+                      "summary": "Gets products inventory",
+                      "description": "Gets all product inventory, limited to 20 items",
+                      "operationId": "getProductsInventory",
+                      "parameters": [],
+                      "responses": {
+                        "200": {
+                          "description": "Returns inventory of all products (limited to 20)",
+                          "content": {
+                            "application/json": {
+                              "schema": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "productId": {
+                                      "type": "string",
+                                      "description": "Product Id"
+                                    },
+                                    "product_description": {
+                                      "type": "string",
+                                      "description": "Product Description"
+                                    },
+                                    "stars": {
+                                      "type": "number",
+                                      "format": "float",
+                                      "description": "Product Rating"
+                                    },
+                                    "reviews": {
+                                      "type": "integer",
+                                      "description": "Number of Reviews"
+                                    },
+                                    "price": {
+                                      "type": "number",
+                                      "format": "float",
+                                      "description": "Product Price"
+                                    },
+                                    "isBestSeller": {
+                                      "type": "boolean",
+                                      "description": "Is Best Seller"
+                                    },
+                                    "boughtInLastMonth": {
+                                      "type": "integer",
+                                      "description": "Bought in Last Month"
+                                    },
+                                    "category_name": {
+                                      "type": "string",
+                                      "description": "Category Name"
+                                    },
+                                    "quantity": {
+                                      "type": "integer",
+                                      "description": "Quantity"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "/GetProductPrice": {
+                    "get": {
+                      "summary": "Gets product price",
+                      "description": "Gets the price of a specific product by its ID",
+                      "operationId": "getProductPrice",
+                      "parameters": [
+                        {
+                          "name": "productId",
+                          "in": "query",
+                          "required": true,
+                          "schema": {
+                            "type": "string"
+                          },
+                          "description": "The ID of the product to get the price for"
+                        }
+                      ],
+                      "responses": {
+                        "200": {
+                          "description": "Returns the product details including price",
+                          "content": {
+                            "application/json": {
+                              "schema": {
+                                "type": "object",
+                                "properties": {
+                                  "productId": {
+                                    "type": "string",
+                                    "description": "Product Id"
+                                  },
+                                  "product_description": {
+                                    "type": "string",
+                                    "description": "Product Description"
+                                  },
+                                  "price": {
+                                    "type": "number",
+                                    "format": "float",
+                                    "description": "Product Price"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "404": {
+                          "description": "Product not found",
+                          "content": {
+                            "application/json": {
+                              "schema": {
+                                "type": "object",
+                                "properties": {
+                                  "error": {
+                                    "type": "string",
+                                    "description": "Error message"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "/RestockProduct": {
+                    "post": {
+                      "summary": "Restocks a product",
+                      "description": "Increases the quantity of a specific product",
+                      "operationId": "RestockProduct",
+                      "requestBody": {
+                        "required": true,
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "type": "object",
+                              "required": ["productId", "quantity"],
+                              "properties": {
+                                "productId": {
+                                  "type": "string",
+                                  "description": "Product Id"
+                                },
+                                "quantity": {
+                                  "type": "integer",
+                                  "description": "Quantity to add to the current stock"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "responses": {
+                        "200": {
+                          "description": "Returns the status of product restock operation",
+                          "content": {
+                            "application/json": {
+                              "schema": {
+                                "type": "object",
+                                "properties": {
+                                  "status": {
+                                    "type": "string",
+                                    "description": "Status of the product restock operation - Success or Failure"
+                                  },
+                                  "productId": {
+                                    "type": "string",
+                                    "description": "Product Id of the restocked item"
+                                  },
+                                  "newQuantity": {
+                                    "type": "integer",
+                                    "description": "Updated quantity after restocking"
+                                  },
+                                  "error": {
+                                    "type": "string",
+                                    "description": "Error message in case of failure"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "400": {
+                          "description": "Bad Request - Missing or invalid parameters",
+                          "content": {
+                            "application/json": {
+                              "schema": {
+                                "type": "object",
+                                "properties": {
+                                  "error": {
+                                    "type": "string",
+                                    "description": "Error message"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+      AgentResourceRoleArn: !GetAtt AmazonBedrockExecutionRoleForAgents.Arn
+      Instruction: "Assume the role of a helpful shopping agent with in-depth knowledge of our product lineup and real-time inventory data. As an AI-powered inventory specialist, your task is to accurately report on product quantities, alert customers to low stock items, and suggest similar products when necessary. Act as a friendly and efficient shopping guide with comprehensive knowledge of our product range and stock levels. Assist customers in finding the perfect item by asking clarifying questions and offering tailored recommendations based on their preferences and our current inventory. Always prioritize accuracy and customer satisfaction in your responses."
+      AutoPrepare: true
+      Description: Bedrock Agent for DAT301
+      FoundationModel: anthropic.claude-3-5-sonnet-20240620-v1:0
+      KnowledgeBases:
+        - Description: "Knowledgebase for DAT301"
+          KnowledgeBaseId: !GetAtt AmazonBedrockAgentKnowledgebase.KnowledgeBaseId
+          KnowledgeBaseState: ENABLED
+
+# Auto-ingestion Lambda Function
+  KBAutoSyncLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: BedrockAgentAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:*
+                  - bedrock-agent:*
+                Resource: '*'
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: 
+                  - !Sub "arn:aws:s3:::${BedrockKB}/*"
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Sub "arn:aws:s3:::${BedrockKB}"
+
+  KBAutoSyncLambda:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - KBAutoSyncLambdaRole
+      - AmazonBedrockAgentDatasource
+      - AmazonBedrockAgentKnowledgebase
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt KBAutoSyncLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import os
+          import json
+          import boto3
+
+          bedrockClient = boto3.client('bedrock-agent')
+
+          def lambda_handler(event, context):
+              print('Inside Lambda Handler')
+              print('event: ', event)
+              dataSourceId = os.environ['DATASOURCEID']
+              knowledgeBaseId = os.environ['KNOWLEDGEBASEID']
+              
+              print('knowledgeBaseId: ', knowledgeBaseId)
+              print('dataSourceId: ', dataSourceId)
+
+              response = bedrockClient.start_ingestion_job(
+                  knowledgeBaseId=knowledgeBaseId,
+                  dataSourceId=dataSourceId
+              )
+              
+              print('Ingestion Job Response: ', response)
+              
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps('response')
+              }
+      Runtime: python3.11
+      Timeout: 300
+      Environment:
+        Variables:
+          DATASOURCEID: !GetAtt AmazonBedrockAgentDatasource.DataSourceId
+          KNOWLEDGEBASEID: !GetAtt AmazonBedrockAgentKnowledgebase.KnowledgeBaseId
+
+  KBAutoSyncLambdaPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn: KBAutoSyncLambda
+    Properties:
+      FunctionName: !Ref KBAutoSyncLambda
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt BedrockKB.Arn
+  
+  # Update bucket with notifications after Lambda and permissions are created
+  BucketNotificationsCustomResource:
+    Type: Custom::S3BucketNotifications
+    DependsOn: 
+      - BedrockKB
+      - KBAutoSyncLambda
+      - KBAutoSyncLambdaPermission
+    Properties:
+      ServiceToken: !GetAtt NotificationSetupFunction.Arn
+      BucketName: !Ref BedrockKB
+      NotificationConfiguration:
+        LambdaFunctionConfigurations:
+          - LambdaFunctionArn: !GetAtt KBAutoSyncLambda.Arn
+            Events: 
+              - s3:ObjectCreated:*
+          - LambdaFunctionArn: !GetAtt KBAutoSyncLambda.Arn
+            Events: 
+              - s3:ObjectRemoved:*
+
+  # Lambda function to set up bucket notifications
+  NotificationSetupFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt NotificationSetupRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import json
+          
+          def lambda_handler(event, context):
+              try:
+                  print(event)
+                  if event['RequestType'] in ['Create', 'Update']:
+                      s3 = boto3.client('s3')
+                      bucket = event['ResourceProperties']['BucketName']
+                      configuration = event['ResourceProperties']['NotificationConfiguration']
+                      
+                      s3.put_bucket_notification_configuration(
+                          Bucket=bucket,
+                          NotificationConfiguration=configuration
+                      )
+                      
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+              except Exception as e:
+                  print(e)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {})
+      Runtime: python3.11
+      Timeout: 60
+
+  NotificationSetupRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3NotificationAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutBucketNotification
+                  - s3:GetBucketNotification
+                Resource: !GetAtt BedrockKB.Arn
+
+Outputs:
+  NotebookInstanceURL:
+    Description: SageMaker Notebook Instance URL
+    Value: !Join
+      - ""
+      - - !Sub "https://console.aws.amazon.com/sagemaker/home?region=${AWS::Region}#/notebook-instances/openNotebook/"
+        - !GetAtt NotebookInstance.NotebookInstanceName
+        - "?view=classic"
+
+  DBEndpoint:
+    Description: "Aurora PostgreSQL Endpoint"
+    Value: !GetAtt "DBCluster.Endpoint.Address"
+    Export:
+      Name:
+        "Fn::Sub": "${AWS::StackName}-DBEndPoint"
+
+  DBSecret:
+    Description: Database Secret
+    Value: !Ref RDSSecrets
+    Export:
+      Name:
+        "Fn::Sub": "${AWS::StackName}-DBSecrets"
+  
+  Cloud9EnvironmentURL:
+    #Condition: isInWS
+    Description: "Cloud9 Environment URL"
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/cloud9/ide/${Cloud9Instance}"
+
+  AuroraBedrockRole:
+    Description: IAM Role for Amazon Aurora and Amazon Bedrock
+    Value: !Ref AuroraBedrockRole
+    Export:
+      Name:
+        "Fn::Sub": "${AWS::StackName}-AuroraBedrockRole"
+  
+  AgentID:
+    Description: Agent ID
+    Value : !Ref AmazonBedrockAgent
+  
+  KBID:
+    Description: ID of the Knowledge base
+    Value: !Ref AmazonBedrockAgentKnowledgebase
+  
+  KnowledgeBaseS3SourceBucketName:
+    Description: S3 bucket for the Knowledge Source
+    Value: !Ref BedrockKB
+
+  KnowledgeBaseSourceID:
+    Description: ID of the Knowledgebase source
+    Value: !Ref AmazonBedrockAgentDatasource
+  
+  VPCID:
+    Description: "VPC ID"
+    Value: !Ref VPC
+  PublicSubnets:
+    Description: "Public Subnet IDs"
+    Value: !Join [",", [!Ref Subnet1, !Ref Subnet2]]
+  PrivateSubnets:
+    Description: "Private Subnet IDs"
+    Value: !Join [",", [!Ref Subnet3, !Ref Subnet4]]
+  
+  S3BucketName:
+    Description: "Name of the S3 bucket"
+    Value: !Ref BedrockKB

@@ -1,0 +1,9 @@
+python-dotenv
+streamlit
+boto3
+streamlit_pdf_viewer
+psycopg[binary,pool]
+plotly
+numpy<2.0
+pandas
+uuid
