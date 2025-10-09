@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🚀 Generative AI with pgvector & Aurora PostgreSQL
+# 🚀 Agentic AI, RAG & Vector Search with Aurora PostgreSQL
 
 ### Build Intelligent AI Applications with Vector Search, RAG, and Agentic Workflows
 
