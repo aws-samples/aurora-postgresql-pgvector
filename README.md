@@ -26,7 +26,7 @@
 
 ## 🎯 About
 
-Discover production-ready **Generative AI use cases** powered by **pgvector**, **Amazon Aurora PostgreSQL**, **Amazon Bedrock**, and **AWS Model Context Protocol (MCP)** servers. This repository showcases semantic search, RAG architectures, autonomous agents, and enterprise AI solutions—all built on a robust vector database foundation.
+Discover enterprise-ready **Generative AI use cases** powered by **pgvector**, **Amazon Aurora PostgreSQL**, **Amazon Bedrock**, and **AWS Model Context Protocol (MCP)** servers. This repository showcases semantic search, RAG architectures, autonomous agents, and enterprise AI solutions—all built on a robust vector database foundation.
 
 **What You'll Build:**
 - 🔍 **Semantic Search** with vector embeddings and similarity algorithms
