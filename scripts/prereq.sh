@@ -451,9 +451,16 @@ function install_python3()
     echo "Creating Python symlinks..."
     sudo ln -sf /usr/local/bin/python${PYTHON_MAJOR_VERSION} /usr/local/bin/python
     sudo ln -sf /usr/local/bin/pip${PYTHON_MAJOR_VERSION} /usr/local/bin/pip
+    
+    # Also create python3 symlink
+    sudo ln -sf /usr/local/bin/python${PYTHON_MAJOR_VERSION} /usr/local/bin/python3
+    sudo ln -sf /usr/local/bin/pip${PYTHON_MAJOR_VERSION} /usr/local/bin/pip3
 
     echo "Upgrading pip..."
     /usr/local/bin/python${PYTHON_MAJOR_VERSION} -m pip install --upgrade pip > ${TERM} 2>&1
+
+    echo "Installing essential Python packages globally..."
+    /usr/local/bin/python${PYTHON_MAJOR_VERSION} -m pip install psycopg2-binary boto3 > ${TERM} 2>&1
 
     # Verify installation
     /usr/local/bin/python${PYTHON_MAJOR_VERSION} --version
@@ -580,7 +587,7 @@ if command -v psql &> /dev/null && [ -n "$PGHOST" ]; then
             echo "⚠️  Database credentials configured but connection failed"
         fi
     else
-        echo "❌ Missing required Python package: No module named 'psycopg2'"
+        echo "⚠️  psycopg2 not installed globally (available in virtual environments)"
     fi
 else
     echo "⚠️  Database connection not configured"
@@ -589,18 +596,16 @@ fi
 echo "============================================================"
 echo "📚 Quick Start Guide:"
 echo "   1. 🔐 Bedrock models are pre-configured"
-echo "   2. 📖 Follow the lab instructions"
-echo "   3. 🎯 Navigate to aurora-postgresql-pgvector/blaize-bazaar for advanced labs"
+echo "   2. 📖 Follow the workshop lab instructions"
+echo "   3. 🎯 All workshop materials are in /workshop"
 echo ""
 echo "📊 Database Commands:"
 echo "   psql                                   - Connect to Aurora PostgreSQL (passwordless!)"
 echo "   python3 /workshop/test_connection.py   - Test database connection"
 echo ""
-echo "🐍 Python Version: $(python3 --version 2>/dev/null || echo 'Not configured')"
+echo "🐍 Python: $(/usr/local/bin/python3.11 --version 2>/dev/null || python3 --version 2>/dev/null || echo 'Not configured')"
 echo ""
-echo "🛍️ Blaize Bazaar: Ready for advanced labs"
-echo "   cd /workshop/aurora-postgresql-pgvector/blaize-bazaar"
-echo "   source venv-blaize-bazaar/bin/activate && streamlit run Home.py --server.port 8501"
+echo "📁 Workshop Directory: /workshop/aurora-postgresql-pgvector"
 echo ""
 echo "Happy coding! 🎉"
 EOF
