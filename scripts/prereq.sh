@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Enhanced prereq.sh with Code Editor support
-# This script works for both Cloud9 and Code Editor environments
+# Enhanced prereq.sh for Code Editor with PostgreSQL pgvector Workshop
+# Optimized for Code Editor environments (Cloud9 support removed)
+# Version: 2.0 - Updated November 2025
 
 # Ensure HOME is set
 if [ -z "$HOME" ]; then
@@ -13,17 +14,17 @@ if [ "${CODE_EDITOR_MODE}" == "true" ]; then
     echo "Running in Code Editor mode"
     export ENV_TYPE="code-editor"
 else
-    echo "Running in Cloud9/standard mode"
-    export ENV_TYPE="cloud9"
+    echo "Running in standard mode"
+    export ENV_TYPE="standard"
 fi
 
 # Main repository configuration
 export DefaultCodeRepository="${DefaultCodeRepository:-https://github.com/aws-samples/aurora-postgresql-pgvector.git}"
 export PROJ_NAME="aurora-postgresql-pgvector"
 
-# Blaize Bazaar configuration
+# Blaize Bazaar configuration (now part of main repo)
 export BLAIZE_PROJ_NAME="blaize-bazaar"
-export BLAIZE_REPO="https://github.com/aws-samples/DAT301-reinvent-2024.git"
+export BLAIZE_PATH="/workshop/aurora-postgresql-pgvector/blaize-bazaar"
 
 # Python configuration
 export PYTHON_MAJOR_VERSION="3.11"
@@ -37,6 +38,11 @@ echo "Using AWS Region: $AWS_REGION"
 # Workshop user (can be overridden by environment)
 export WORKSHOP_USER="${WORKSHOP_USER:-$(whoami)}"
 echo "Workshop user: $WORKSHOP_USER"
+
+# TERM setting for output redirection
+if [ "X${TERM}" == "X" ]; then
+    TERM=/dev/null
+fi
 
 function check_aws_cli()
 {
@@ -77,49 +83,27 @@ function git_clone()
         echo "Successfully cloned main repository to $clone_dir/$PROJ_NAME"
     fi
     
-    # Clone Blaize Bazaar repository to /workshop
-    local workshop_dir="/workshop"
-    sudo mkdir -p "$workshop_dir"
-    cd "$workshop_dir" || { echo "Failed to change directory to $workshop_dir"; return 1; }
-    
-    if [ -d "$BLAIZE_PROJ_NAME" ]; then
-        echo "Directory $BLAIZE_PROJ_NAME already exists. Removing it before cloning."
-        sudo rm -rf "$BLAIZE_PROJ_NAME"
-    fi
-    
-    # Clone DAT301 repo and extract blaize-bazaar directory
-    git clone "$BLAIZE_REPO" temp-dat301 || { echo "Failed to clone DAT301 repository"; return 1; }
-    
-    if [ -d "temp-dat301/$BLAIZE_PROJ_NAME" ]; then
-        sudo mv "temp-dat301/$BLAIZE_PROJ_NAME" "$BLAIZE_PROJ_NAME"
-        sudo rm -rf temp-dat301
-        echo "Successfully extracted Blaize Bazaar application"
-    else
-        echo "Warning: Blaize Bazaar directory not found in DAT301 repo"
-        sudo rm -rf temp-dat301
-    fi
+    # Note: Blaize Bazaar is already included in the main repository
+    # No need to clone separately
     
     # Set proper ownership
-    sudo chown -R $WORKSHOP_USER:$WORKSHOP_USER "$workshop_dir" 2>/dev/null || true
-    if [ "$ENV_TYPE" != "code-editor" ]; then
-        sudo chown -R $WORKSHOP_USER:$WORKSHOP_USER "$clone_dir" 2>/dev/null || true
-    fi
+    sudo chown -R $WORKSHOP_USER:$WORKSHOP_USER "$clone_dir" 2>/dev/null || true
 }
 
-function create_env_file() 
+function create_env_file()
 {
-    local repo_dir="/workshop/${BLAIZE_PROJ_NAME}"
+    local repo_dir="$BLAIZE_PATH"
     local env_file="${repo_dir}/.env"
-    
+
     # Only create .env file if Blaize Bazaar directory exists
     if [ ! -d "$repo_dir" ]; then
-        echo "Blaize Bazaar directory not found, skipping .env file creation"
+        echo "Blaize Bazaar directory not found at $repo_dir, skipping .env file creation"
         return 0
     fi
-    
+
     # Ensure we're in the repository directory
     cd "$repo_dir" || { echo "Failed to change directory to $repo_dir"; return 1; }
-    
+
     # Create or overwrite the .env file
     cat > "$env_file" << EOL
 # Database configuration
@@ -129,7 +113,7 @@ DB_PORT=5432
 DB_NAME=postgres
 DB_USER=${PGUSER}
 DB_PASSWORD=${PGPASSWORD}
-    
+
 # AWS configuration
 # Note: Don't change these values
 AWS_REGION=${AWS_REGION}
@@ -143,24 +127,24 @@ BEDROCK_CLAUDE_MODEL_ARN=arn:aws:bedrock:${AWS_REGION}::foundation-model/anthrop
 # Note: Don't change this value
 LAMBDA_FUNCTION_NAME=genai-dat-301-labs_BedrockAgent_Lambda
 EOL
-    
+
     echo "Created .env file at $env_file"
     sudo chown $WORKSHOP_USER:$WORKSHOP_USER "$env_file"
 }
 
 function setup_venv()
 {
-    local repo_dir="/workshop/${BLAIZE_PROJ_NAME}"
-    
+    local repo_dir="$BLAIZE_PATH"
+
     # Only setup venv if Blaize Bazaar directory exists
     if [ ! -d "$repo_dir" ]; then
-        echo "Blaize Bazaar directory not found, skipping virtual environment setup"
+        echo "Blaize Bazaar directory not found at $repo_dir, skipping virtual environment setup"
         return 0
     fi
-    
+
     cd "$repo_dir" || { echo "Failed to change directory to $repo_dir"; return 1; }
 
-    # Create .env file
+    # Create .env file first
     create_env_file || { echo "Failed to create .env file"; return 1; }
 
     # Create virtual environment if it doesn't exist
@@ -169,92 +153,44 @@ function setup_venv()
         return 0
     fi
 
-    echo "Creating virtual environment..."
-    # Try different Python versions
-    PYTHON_CMD=""
-    for py_cmd in python3.11 python3.9 python3; do
-        if command -v $py_cmd &> /dev/null; then
-            echo "Using $py_cmd for virtual environment"
-            PYTHON_CMD=$py_cmd
-            break
-        fi
-    done
+    echo "Creating virtual environment with Python ${PYTHON_MAJOR_VERSION}..."
     
-    if [ -z "$PYTHON_CMD" ]; then
-        echo "No suitable Python version found"
+    # Use Python 3.11 explicitly
+    PYTHON_CMD="/usr/local/bin/python${PYTHON_MAJOR_VERSION}"
+    
+    if ! command -v $PYTHON_CMD &> /dev/null; then
+        echo "Python ${PYTHON_MAJOR_VERSION} not found at $PYTHON_CMD"
         return 1
     fi
-    
+
     $PYTHON_CMD -m venv "./venv-blaize-bazaar" || { echo "Failed to create virtual environment"; return 1; }
 
     # Activate virtual environment and install requirements
     source "./venv-blaize-bazaar/bin/activate" || { echo "Failed to activate virtual environment"; return 1; }
-    python -m pip install --upgrade pip > ${TERM} 2>&1
     
+    echo "Upgrading pip in virtual environment..."
+    python -m pip install --upgrade pip > ${TERM} 2>&1
+
     # Install requirements if requirements.txt exists
     if [ -f "requirements.txt" ]; then
-        echo "Installing from requirements.txt..."
+        echo "Installing packages from requirements.txt..."
         python -m pip install -r requirements.txt || { echo "Failed to install requirements"; return 1; }
-    else
-        # Install comprehensive packages for all workshop modules
-        echo "Installing comprehensive packages for workshop..."
-        WORKSHOP_PACKAGES="streamlit plotly altair pandas psycopg2-binary boto3 pgvector numpy requests jupyter ipykernel notebook transformers seaborn matplotlib-inline ipywidgets"
-        python -m pip install $WORKSHOP_PACKAGES > ${TERM} 2>&1 || {
-            echo "Failed to install some packages, trying individually..."
-            # Core packages (critical)
-            python -m pip install boto3 || echo "boto3 install failed"
-            python -m pip install psycopg2-binary || echo "psycopg2 install failed"
-            python -m pip install pgvector || echo "pgvector install failed"
-            python -m pip install pandas || echo "pandas install failed"
-            python -m pip install numpy || echo "numpy install failed"
-            python -m pip install requests || echo "requests install failed"
-            # Visualization packages
-            python -m pip install streamlit || echo "Streamlit install failed"
-            python -m pip install plotly || echo "Plotly install failed"
-            python -m pip install altair || echo "altair install failed"
-            python -m pip install seaborn || echo "seaborn install failed"
-            # Jupyter packages
-            python -m pip install jupyter || echo "jupyter install failed"
-            python -m pip install ipykernel || echo "ipykernel install failed"
-            python -m pip install notebook || echo "notebook install failed"
-            # ML packages
-            python -m pip install transformers || echo "transformers install failed"
-        }
     fi
     
-    # Verify and ensure streamlit installation
-    echo "Verifying Streamlit installation..."
-    if ! python -c "import streamlit" 2>/dev/null; then
-        echo "❌ Streamlit not found, installing with retry logic..."
-        for i in {1..3}; do
-            echo "Streamlit install attempt $i/3"
-            if python -m pip install --force-reinstall streamlit plotly altair; then
-                if python -c "import streamlit" 2>/dev/null; then
-                    echo "✅ Streamlit successfully installed and verified"
-                    break
-                else
-                    echo "❌ Streamlit installed but import failed, retrying..."
-                fi
-            else
-                echo "❌ Streamlit installation failed, attempt $i"
-            fi
-            sleep 2
-        done
-        
-        # Final verification
-        if python -c "import streamlit" 2>/dev/null; then
-            echo "✅ Final verification: Streamlit is working"
-        else
-            echo "⚠️ WARNING: Streamlit installation failed after all attempts"
-            echo "Users will need to run: python -m pip install streamlit"
-        fi
-    else
-        echo "✅ Streamlit already installed and working"
-    fi
+    # Install additional critical packages
+    echo "Installing additional packages (boto3, psycopg2-binary, langchain)..."
+    python -m pip install boto3 psycopg2-binary langchain langchain-aws langchain-community > ${TERM} 2>&1
+    
+    # Verify critical imports
+    echo "Verifying package installations..."
+    python -c "import boto3; print('✅ boto3 installed')" || echo "❌ boto3 not available"
+    python -c "import streamlit; print('✅ streamlit installed')" || echo "❌ streamlit not available"
+    python -c "import psycopg2; print('✅ psycopg2 installed')" || echo "❌ psycopg2 not available"
+    python -c "import langchain; print('✅ langchain installed')" || echo "❌ langchain not available"
     
     deactivate
 
-    echo "Successfully set up virtual environment and installed requirements"
+    echo "Successfully set up virtual environment with Python ${PYTHON_MAJOR_VERSION}"
     sudo chown -R $WORKSHOP_USER:$WORKSHOP_USER "$repo_dir"
 }
 
@@ -268,48 +204,47 @@ function install_packages()
     local current_dir
     current_dir=$(pwd)
     
-    sudo yum install -y jq  > "${TERM}" 2>&1
+    sudo yum install -y jq > "${TERM}" 2>&1
     print_line
-    
-    # Cloud9 resize (only if available)
-    if command -v curl &> /dev/null; then
-        source <(curl -s https://raw.githubusercontent.com/aws-samples/aws-swb-cloud9-init/mainline/cloud9-resize.sh) 2>/dev/null || true
-    fi
     
     echo "Installing aws cli v2"
     print_line
-    if aws --version | grep -q "aws-cli/2"; then
+    if aws --version 2>/dev/null | grep -q "aws-cli/2"; then
         echo "AWS CLI v2 is already installed"
+        print_line
         return
     fi
     
     cd /tmp || { echo "Failed to change directory to /tmp"; return 1; }
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" > "${TERM}" 2>&1
+    
+    # Detect architecture for AWS CLI download
+    ARCH=$(uname -m)
+    if [ "$ARCH" == "aarch64" ]; then
+        AWS_CLI_URL="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
+    else
+        AWS_CLI_URL="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+    fi
+    
+    curl "$AWS_CLI_URL" -o "awscliv2.zip" > "${TERM}" 2>&1
     unzip -o awscliv2.zip > "${TERM}" 2>&1
     sudo ./aws/install --update > "${TERM}" 2>&1
     cd "$current_dir" || { echo "Failed to return to original directory"; return 1; }
+    
+    print_line
 }
 
 function install_postgresql()
 {
     print_line
-    echo "Installing PostgreSQL client"
+    echo "Installing PostgreSQL 16 client"
     print_line
 
-    # Update package lists
-    sudo yum update -y > ${TERM} 2>&1
-
-    # Try PostgreSQL 14 first, then fallback
-    if sudo amazon-linux-extras enable postgresql14 > ${TERM} 2>&1; then
-        sudo yum install -y postgresql-server postgresql-contrib sysbench > ${TERM} 2>&1
-    else
-        # Fallback for different environments
-        sudo yum install -y postgresql postgresql-contrib > ${TERM} 2>&1
-    fi
+    # Install PostgreSQL 16 for Amazon Linux 2023
+    sudo yum install -y postgresql16 postgresql16-devel > ${TERM} 2>&1
 
     # Verify installation
     if command -v psql > /dev/null; then
-        echo "PostgreSQL client installed successfully"
+        echo "PostgreSQL 16 client installed successfully"
         psql --version
     else
         echo "PostgreSQL installation failed"
@@ -349,79 +284,62 @@ function configure_pg()
             return 0
         fi
         
-        echo "Found DB cluster: $DB_CLUSTER_ID"
+        echo "Found cluster: $DB_CLUSTER_ID"
         
-        # Try to find the secret dynamically
-        echo "Looking for database secrets..."
+        # Try to find the associated secret
         SECRET_NAME=$(aws secretsmanager list-secrets \
             --region $AWS_REGION \
-            --query 'SecretList[?contains(Name, `db`) || contains(Name, `postgres`) || contains(Name, `aurora`)].Name' \
+            --query "SecretList[?contains(Name, '$DB_CLUSTER_ID')].ARN" \
             --output text | head -1)
         
         if [ -z "$SECRET_NAME" ]; then
-            echo "No database secret found. Skipping database configuration."
-            return 0
+            echo "No secret found for cluster $DB_CLUSTER_ID"
+            return 1
         fi
     fi
     
     echo "Using secret: $SECRET_NAME"
     
-    # Get database endpoint (only if not using secret ARN directly)
-    if [ -n "$DB_CLUSTER_ID" ]; then
-        PGHOST=$(aws rds describe-db-cluster-endpoints \
-            --db-cluster-identifier $DB_CLUSTER_ID \
+    # Get secret value
+    SECRET_JSON=$(aws secretsmanager get-secret-value \
+        --secret-id "$SECRET_NAME" \
+        --region $AWS_REGION \
+        --query SecretString \
+        --output text)
+    
+    if [ -z "$SECRET_JSON" ]; then
+        echo "Failed to retrieve secret value"
+        return 1
+    fi
+    
+    # Parse secret
+    export PGUSER=$(echo $SECRET_JSON | jq -r .username)
+    export PGPASSWORD=$(echo $SECRET_JSON | jq -r .password)
+    PGHOST_FROM_SECRET=$(echo $SECRET_JSON | jq -r .host)
+    
+    # Use host from secret, or try to get cluster endpoint
+    if [ -n "$PGHOST_FROM_SECRET" ] && [ "$PGHOST_FROM_SECRET" != "null" ]; then
+        export PGHOST=$PGHOST_FROM_SECRET
+        echo "DB Host from secret: $PGHOST"
+    elif [ -n "$DB_CLUSTER_ID" ]; then
+        export PGHOST=$(aws rds describe-db-clusters \
             --region $AWS_REGION \
-            --query 'DBClusterEndpoints[0].Endpoint' \
+            --db-cluster-identifier $DB_CLUSTER_ID \
+            --query 'DBClusters[0].Endpoint' \
             --output text)
-        
-        if [ -z "$PGHOST" ]; then
-            echo "Failed to retrieve DB endpoint. Check the cluster identifier and permissions."
-            return 1
-        fi
-        export PGHOST
-        echo "DB Host: $PGHOST"
-    fi
-    
-    # Get credentials from secret
-    CREDS=$(aws secretsmanager get-secret-value \
-        --secret-id $SECRET_NAME \
-        --region $AWS_REGION)
-
-    if [ $? -ne 0 ]; then
-        echo "Failed to retrieve secret. Error:"
-        echo "$CREDS"
-        return 1
-    fi
-
-    CREDS=$(echo "$CREDS" | jq -r '.SecretString')
-
-    if [ -z "$CREDS" ]; then
-        echo "Failed to retrieve credentials from Secrets Manager. Check the secret name and permissions."
+        echo "DB Host from cluster: $PGHOST"
+    else
+        echo "Could not determine database host"
         return 1
     fi
     
-    PGPASSWORD=$(echo $CREDS | jq -r '.password')
-    PGUSER=$(echo $CREDS | jq -r '.username')
-    
-    # If host is in the secret, use it
-    if [ -z "$PGHOST" ]; then
-        PGHOST=$(echo $CREDS | jq -r '.host // empty')
-        if [ -n "$PGHOST" ]; then
-            export PGHOST
-            echo "DB Host from secret: $PGHOST"
-        fi
-    fi
-
-    if [ -z "$PGPASSWORD" ] || [ -z "$PGUSER" ]; then
-        echo "Failed to extract username or password from the secret."
+    if [ -z "$PGHOST" ] || [ "$PGHOST" == "None" ] || [ "$PGHOST" == "null" ]; then
+        echo "Failed to get database host"
         return 1
     fi
-
-    export PGPASSWORD
-    export PGUSER
-
+    
     echo "Successfully retrieved database credentials"
-
+    
     # Set environment variables for the current session
     export PGDATABASE=postgres
     export PGPORT=5432
@@ -459,6 +377,12 @@ function configure_pg()
 
     echo "Environment variables set and persisted to $PROFILE_FILE"
 
+    # Create .pgpass file for passwordless psql access
+    PGPASS_FILE="$HOME/.pgpass"
+    echo "$PGHOST:5432:*:$PGUSER:$PGPASSWORD" > $PGPASS_FILE
+    chmod 600 $PGPASS_FILE
+    echo "Created .pgpass file for passwordless psql access"
+
     # Test the connection
     if PGPASSWORD=$PGPASSWORD psql -h $PGHOST -U $PGUSER -d postgres -c "SELECT 1" >/dev/null 2>&1; then
         echo "Successfully connected to the database."
@@ -474,41 +398,71 @@ function install_python3()
     echo "Installing Python ${PYTHON_VERSION}"
     print_line
 
-    # Install Python 3
-    sudo yum remove -y openssl-devel > ${TERM} 2>&1
-    sudo yum install -y gcc openssl11-devel bzip2-devel libffi-devel sqlite-devel > ${TERM} 2>&1
-
+    # Check if Python 3.11 is already installed
     echo "Checking if python${PYTHON_MAJOR_VERSION} is already installed"
-    if command -v python${PYTHON_MAJOR_VERSION} &> /dev/null; then 
+    if command -v /usr/local/bin/python${PYTHON_MAJOR_VERSION} &> /dev/null; then 
         echo "Python${PYTHON_MAJOR_VERSION} already exists"
-        return
+        /usr/local/bin/python${PYTHON_MAJOR_VERSION} --version
+        return 0
     fi
 
+    # Install build dependencies
+    echo "Installing build dependencies..."
+    sudo yum groupinstall -y "Development Tools" > ${TERM} 2>&1
+    sudo yum install -y \
+        gcc \
+        openssl-devel \
+        bzip2-devel \
+        libffi-devel \
+        zlib-devel \
+        wget \
+        make \
+        sqlite-devel \
+        readline-devel \
+        tk-devel \
+        gdbm-devel \
+        libuuid-devel \
+        ncurses-devel \
+        xz-devel > ${TERM} 2>&1
+
     cd /tmp
+    
+    # Clean up any previous build attempts
+    sudo rm -rf Python-${PYTHON_VERSION}*
+    
     echo "Downloading Python ${PYTHON_VERSION}"
     wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz > ${TERM} 2>&1 || { echo "Failed to download Python"; return 1; }
     tar xzf Python-${PYTHON_VERSION}.tgz > ${TERM} 2>&1 || { echo "Failed to extract Python"; return 1; }
     cd Python-${PYTHON_VERSION}
-    echo "Configuring Python"
-    ./configure --enable-optimizations > ${TERM} 2>&1 || { echo "Failed to configure Python"; return 1; }
-    echo "Building Python (this may take a while)"
-    sudo make altinstall > ${TERM} 2>&1 || { echo "Failed to build Python"; return 1; }
+    
+    echo "Configuring Python (this may take a few minutes)..."
+    ./configure --enable-optimizations --prefix=/usr/local --with-ensurepip=install > ${TERM} 2>&1 || { echo "Failed to configure Python"; return 1; }
+    
+    echo "Building Python (this will take 5-10 minutes)..."
+    make -j$(nproc) > ${TERM} 2>&1 || { echo "Failed to build Python"; return 1; }
+    
+    echo "Installing Python..."
+    sudo make altinstall > ${TERM} 2>&1 || { echo "Failed to install Python"; return 1; }
+    
+    # Clean up
     cd /tmp
     sudo rm -rf Python-${PYTHON_VERSION} Python-${PYTHON_VERSION}.tgz
 
-    echo "Updating Python symlinks"
-    sudo ln -sf /usr/local/bin/python${PYTHON_MAJOR_VERSION} /usr/bin/python3
-    sudo ln -sf /usr/local/bin/pip${PYTHON_MAJOR_VERSION} /usr/bin/pip3
+    echo "Creating Python symlinks..."
+    sudo ln -sf /usr/local/bin/python${PYTHON_MAJOR_VERSION} /usr/local/bin/python
+    sudo ln -sf /usr/local/bin/pip${PYTHON_MAJOR_VERSION} /usr/local/bin/pip
 
-    echo "Upgrading pip"
+    echo "Upgrading pip..."
     /usr/local/bin/python${PYTHON_MAJOR_VERSION} -m pip install --upgrade pip > ${TERM} 2>&1
 
-    echo "Python ${PYTHON_VERSION} installation completed"
+    # Verify installation
+    /usr/local/bin/python${PYTHON_MAJOR_VERSION} --version
+    echo "Python ${PYTHON_VERSION} installation completed successfully"
 }
 
 function activate_venv()
 {
-    local venv_path="/workshop/${BLAIZE_PROJ_NAME}/venv-blaize-bazaar/bin/activate"
+    local venv_path="$BLAIZE_PATH/venv-blaize-bazaar/bin/activate"
 
     if [ -f "$venv_path" ]; then
         echo "Activating virtual environment"
@@ -561,7 +515,7 @@ function set_bedrock_env_vars() {
         } >> $PROFILE_FILE
         
         # Append to the .env file if it exists
-        ENV_FILE="/workshop/${BLAIZE_PROJ_NAME}/.env"
+        ENV_FILE="$BLAIZE_PATH/.env"
         if [ -f "$ENV_FILE" ]; then
             echo "Appending Bedrock and S3 variables to .env file..."
             {
@@ -598,535 +552,457 @@ function setup_code_editor_bashrc() {
     cat >> $HOME/.bashrc << 'EOF'
 
 # Workshop environment variables
-export PATH="$PATH:$HOME/.local/bin"
-export NEXT_TELEMETRY_DISABLED=1
-export PS1="\u@\h:\w\$ "
+export PATH="/usr/local/bin:$PATH"
+export PYTHONPATH="/usr/local/lib/python3.11/site-packages:$PYTHONPATH"
 
-# Python paths
-export PATH="/home/participant/.local/bin:/usr/local/bin:$PATH"
-export PYTHONPATH="/home/participant/.local/lib/python3.11/site-packages:/home/participant/.local/lib/python3.9/site-packages:$PYTHONPATH"
+# PostgreSQL connection helpers - simple psql command works now!
+alias psql='psql -h $PGHOST -U $PGUSER -d postgres'
+alias pgversion='psql -c "SELECT version();"'
 
-# Python aliases
-alias python="/usr/local/bin/python3"
-alias python3="/usr/local/bin/python3"
-alias pip="/usr/local/bin/pip3"
-alias pip3="/usr/local/bin/pip3"
-alias streamlit="python3 -m streamlit"
+# Virtual environment helper
+alias activate-blaize='cd /workshop/aurora-postgresql-pgvector/blaize-bazaar && source venv-blaize-bazaar/bin/activate'
+
+# Streamlit runner
+alias run-blaize='cd /workshop/aurora-postgresql-pgvector/blaize-bazaar && source venv-blaize-bazaar/bin/activate && streamlit run Home.py --server.port 8501'
+
+# Workshop banner
+echo "🚀 Welcome to GenAI pgvector Workshop!"
+echo "============================================================"
+echo "🔍 Testing Aurora PostgreSQL Connection..."
+echo "============================================================"
+
+# Test database connection
+if command -v psql &> /dev/null && [ -n "$PGHOST" ]; then
+    if python3 -c "import psycopg2" &> /dev/null; then
+        if PGPASSWORD=$PGPASSWORD psql -h $PGHOST -U $PGUSER -d postgres -c "SELECT 1" >/dev/null 2>&1; then
+            echo "✅ Connected to Aurora PostgreSQL successfully!"
+        else
+            echo "⚠️  Database credentials configured but connection failed"
+        fi
+    else
+        echo "❌ Missing required Python package: No module named 'psycopg2'"
+    fi
+else
+    echo "⚠️  Database connection not configured"
+fi
+
+echo "============================================================"
+echo "📚 Quick Start Guide:"
+echo "   1. 🔐 Bedrock models are pre-configured"
+echo "   2. 📖 Follow the lab instructions"
+echo "   3. 🎯 Navigate to aurora-postgresql-pgvector/blaize-bazaar for advanced labs"
+echo ""
+echo "📊 Database Commands:"
+echo "   psql                                   - Connect to Aurora PostgreSQL (passwordless!)"
+echo "   python3 /workshop/test_connection.py   - Test database connection"
+echo ""
+echo "🐍 Python Version: $(python3 --version 2>/dev/null || echo 'Not configured')"
+echo ""
+echo "🛍️ Blaize Bazaar: Ready for advanced labs"
+echo "   cd /workshop/aurora-postgresql-pgvector/blaize-bazaar"
+echo "   source venv-blaize-bazaar/bin/activate && streamlit run Home.py --server.port 8501"
+echo ""
+echo "Happy coding! 🎉"
 EOF
 
     echo "Code Editor bashrc configuration complete"
 }
 
-function create_database_test_script() {
-    if [ "$ENV_TYPE" != "code-editor" ]; then
-        return 0
-    fi
-    
+function create_db_test_script() {
     echo "Creating database connection test script..."
     
-    cat > /workshop/test_connection.py << 'EOFTEST'
+    cat > /workshop/test_connection.py << 'PYTHON'
 #!/usr/bin/env python3
 """
-Test script for verifying database connection and pgvector setup
+Database Connection Test Script
+Tests connection to Aurora PostgreSQL and pgvector extension
 """
+
 import os
-import json
 import sys
 
 def test_connection():
-    print("=" * 60)
-    print("🔍 Testing Aurora PostgreSQL Connection...")
-    print("=" * 60)
-
-    # Check for required environment variables
-    if not os.environ.get('PGHOST'):
-        print("❌ Database not configured (PGHOST not set)")
-        print("=" * 60)
-        return False
-
     try:
-        import boto3
         import psycopg2
-        from pgvector.psycopg2 import register_vector
-    except ImportError as e:
-        print(f"❌ Missing required Python package: {e}")
-        print("=" * 60)
+        print("✅ psycopg2 module loaded successfully")
+    except ImportError:
+        print("❌ Error: psycopg2 not installed")
+        print("   Install with: pip install psycopg2-binary")
         return False
-
+    
+    # Get connection parameters from environment
+    host = os.environ.get('PGHOST')
+    user = os.environ.get('PGUSER')
+    password = os.environ.get('PGPASSWORD')
+    database = os.environ.get('PGDATABASE', 'postgres')
+    
+    if not all([host, user, password]):
+        print("❌ Error: Database credentials not set in environment")
+        print("   Required: PGHOST, PGUSER, PGPASSWORD")
+        return False
+    
     try:
-        dbhost = os.environ.get('PGHOST')
-        dbport = os.environ.get('PGPORT', '5432')
-        dbuser = os.environ.get('PGUSER')
-        dbpass = os.environ.get('PGPASSWORD')
-        dbname = os.environ.get('PGDATABASE', 'postgres')
-        region = os.environ.get('AWS_REGION', 'us-west-2')
-
-        print(f"📊 Connection Details:")
-        print(f"   Region: {region}")
-        print(f"   Host: {dbhost}")
-        print(f"   Port: {dbport}")
-        print(f"   Database: {dbname}")
-        print(f"   User: {dbuser}")
-        print("-" * 60)
-
+        print(f"🔌 Connecting to {host}...")
         conn = psycopg2.connect(
-            host=dbhost,
-            user=dbuser,
-            password=dbpass,
-            port=dbport,
-            database=dbname,
-            connect_timeout=10
+            host=host,
+            user=user,
+            password=password,
+            database=database,
+            port=5432
         )
-        register_vector(conn)
-
-        cur = conn.cursor()
-        cur.execute("SELECT version();")
-        version = cur.fetchone()
-        print(f"✅ Successfully connected to Aurora PostgreSQL!")
-        print(f"   Version: {version[0].split(',')[0]}")
-
-        cur.execute("SELECT * FROM pg_extension WHERE extname = 'vector';")
-        if cur.fetchone():
-            print(f"✅ pgvector extension is installed and ready")
-        else:
-            print(f"⚠️  pgvector extension is NOT installed")
-
-        print("-" * 60)
-        print(f"🔗 Connection String:")
-        print(f"   postgresql://{dbuser}:****@{dbhost}:{dbport}/{dbname}")
-        print("-" * 60)
-        print(f"💡 Quick psql commands:")
-        print(f"   psql                         - Connect to database")
-        print(f"   psql -c 'SELECT version()'   - Check version")
-
-        cur.close()
+        print("✅ Connected to database successfully!")
+        
+        cursor = conn.cursor()
+        
+        # Test basic query
+        cursor.execute("SELECT version();")
+        version = cursor.fetchone()[0]
+        print(f"📊 PostgreSQL Version: {version}")
+        
+        # Test pgvector extension
+        try:
+            cursor.execute("SELECT * FROM pg_extension WHERE extname = 'vector';")
+            if cursor.fetchone():
+                print("✅ pgvector extension is installed")
+            else:
+                print("⚠️  pgvector extension not found (may need to be enabled)")
+        except Exception as e:
+            print(f"⚠️  Could not check pgvector extension: {e}")
+        
+        cursor.close()
         conn.close()
-
-        print("=" * 60)
-        print("✅ Database connection test PASSED!")
-        print("=" * 60)
+        print("\n✅ Database connection test PASSED!")
         return True
-
+        
     except Exception as e:
-        print(f"❌ Database connection FAILED: {e}")
-        print("=" * 60)
+        print(f"❌ Connection failed: {e}")
         return False
 
 if __name__ == "__main__":
     success = test_connection()
     sys.exit(0 if success else 1)
-EOFTEST
+PYTHON
 
     chmod +x /workshop/test_connection.py
-    chown $WORKSHOP_USER:$WORKSHOP_USER /workshop/test_connection.py
     echo "Database test script created at /workshop/test_connection.py"
 }
 
-function create_streamlit_fix_script() {
-    if [ "$ENV_TYPE" != "code-editor" ]; then
-        return 0
-    fi
-    
+function create_streamlit_fix() {
     echo "Creating Streamlit fix script..."
     
-    cat > /workshop/fix_streamlit.sh << 'EOFFIX'
+    cat > /workshop/fix_streamlit.sh << 'BASH'
 #!/bin/bash
-echo "🔧 Comprehensive Streamlit Fix Script"
-echo "======================================"
+# Fix for Streamlit in Code Editor environment
 
-# Function to test streamlit
-test_streamlit() {
-  local python_cmd=$1
-  echo "Testing Streamlit with $python_cmd..."
-  if $python_cmd -c "import streamlit; print('Streamlit version:', streamlit.__version__)" 2>/dev/null; then
-    echo "✅ Streamlit is working with $python_cmd"
-    return 0
-  else
-    echo "❌ Streamlit not working with $python_cmd"
-    return 1
-  fi
-}
+cd /workshop/aurora-postgresql-pgvector/blaize-bazaar
+source venv-blaize-bazaar/bin/activate
 
-# Try different Python commands
-PYTHON_COMMANDS=("python" "python3" "/usr/local/bin/python" "/usr/local/bin/python3" "python3.11" "python3.9")
+# Reinstall streamlit if needed
+pip install --upgrade streamlit
 
-echo "Step 1: Testing existing Streamlit installations..."
-for cmd in "${PYTHON_COMMANDS[@]}"; do
-  if command -v $cmd &> /dev/null; then
-    if test_streamlit $cmd; then
-      echo "✅ Streamlit already working with $cmd"
-      echo "Use: $cmd -m streamlit run Home.py --server.port 8501"
-      exit 0
-    fi
-  fi
-done
+# Create .streamlit config directory
+mkdir -p .streamlit
 
-echo "Step 2: Installing Streamlit..."
-cd /workshop/blaize-bazaar 2>/dev/null || cd /workshop
+# Create config.toml
+cat > .streamlit/config.toml << EOF
+[server]
+port = 8501
+enableCORS = false
+enableXsrfProtection = false
 
-# Try virtual environment first
-if [ -d "venv-blaize-bazaar" ]; then
-  echo "Using virtual environment..."
-  source venv-blaize-bazaar/bin/activate
-  python -m pip install --upgrade pip
-  python -m pip install --force-reinstall streamlit plotly altair pandas
-  if test_streamlit python; then
-    echo "✅ Success! Use: source venv-blaize-bazaar/bin/activate && streamlit run Home.py --server.port 8501"
-    exit 0
-  fi
-  deactivate
-fi
+[browser]
+gatherUsageStats = false
+EOF
 
-# Try system installation
-echo "Trying system installation..."
-for cmd in "${PYTHON_COMMANDS[@]}"; do
-  if command -v $cmd &> /dev/null; then
-    echo "Installing with $cmd..."
-    $cmd -m pip install --user --force-reinstall streamlit plotly altair pandas
-    if test_streamlit $cmd; then
-      echo "✅ Success! Use: $cmd -m streamlit run Home.py --server.port 8501"
-      exit 0
-    fi
-  fi
-done
-
-echo "❌ All installation attempts failed"
-echo "Manual steps:"
-echo "1. Check Python: python3 --version"
-echo "2. Install manually: python3 -m pip install --user streamlit"
-echo "3. Run with: python3 -m streamlit run Home.py --server.port 8501"
-EOFFIX
+echo "✅ Streamlit configuration updated"
+echo "Run with: streamlit run Home.py --server.port 8501"
+BASH
 
     chmod +x /workshop/fix_streamlit.sh
-    chown $WORKSHOP_USER:$WORKSHOP_USER /workshop/fix_streamlit.sh
     echo "Streamlit fix script created at /workshop/fix_streamlit.sh"
 }
 
-function create_startup_script() {
-    if [ "$ENV_TYPE" != "code-editor" ]; then
-        return 0
-    fi
-    
+function create_startup_check() {
     echo "Creating startup check script..."
     
-    cat > $HOME/.startup_check.sh << 'EOFSTARTUP'
+    cat > /workshop/startup_check.sh << 'BASH'
 #!/bin/bash
-clear
-echo ""
-echo "🚀 Welcome to GenAI pgvector Workshop!"
+# Startup check script for workshop environment
+
+echo "=== Workshop Environment Check ==="
 echo ""
 
-# Test database connection if available
-if [ -f /workshop/test_connection.py ] && [ -n "$PGHOST" ]; then
-    python3 /workshop/test_connection.py
+# Check Python
+echo "Python 3.11:"
+/usr/local/bin/python3.11 --version 2>/dev/null && echo "  ✅ Installed" || echo "  ❌ Not found"
+
+# Check PostgreSQL
+echo "PostgreSQL:"
+psql --version 2>/dev/null && echo "  ✅ Installed" || echo "  ❌ Not found"
+
+# Check AWS CLI
+echo "AWS CLI:"
+aws --version 2>/dev/null && echo "  ✅ Installed" || echo "  ❌ Not found"
+
+# Check directories
+echo "Workshop directories:"
+[ -d "/workshop/aurora-postgresql-pgvector" ] && echo "  ✅ Main repo cloned" || echo "  ❌ Main repo missing"
+[ -d "/workshop/blaize-bazaar" ] && echo "  ✅ Blaize Bazaar cloned" || echo "  ❌ Blaize Bazaar missing"
+
+# Check virtual environment
+echo "Virtual environment:"
+[ -d "/workshop/blaize-bazaar/venv-blaize-bazaar" ] && echo "  ✅ Created" || echo "  ❌ Not found"
+
+# Check database connection
+echo "Database connection:"
+if [ -n "$PGHOST" ]; then
+    echo "  ✅ Credentials configured (Host: $PGHOST)"
+else
+    echo "  ❌ Credentials not configured"
 fi
 
 echo ""
-echo "📚 Quick Start Guide:"
-echo "   1. 🔐 Bedrock models are pre-configured"
-echo "   2. 📖 Follow the lab instructions"
-echo "   3. 🎯 Navigate to blaize-bazaar for advanced labs"
-echo ""
-echo "📊 Database Commands:"
-echo "   psql                         - Connect to Aurora PostgreSQL"
-echo "   python3 test_connection.py   - Test database connection"
-echo ""
-echo "🐍 Python Version: $(python3 --version 2>&1)"
-echo ""
-if [ -d "/workshop/blaize-bazaar" ]; then
-    echo "🛍️ Blaize Bazaar: Ready for advanced labs"
-    if [ -f "/workshop/blaize-bazaar/venv-blaize-bazaar/bin/activate" ]; then
-        echo "   cd blaize-bazaar && source venv-blaize-bazaar/bin/activate && streamlit run Home.py --server.port 8501"
-    else
-        echo "   cd blaize-bazaar && python3 -m streamlit run Home.py --server.port 8501"
-    fi
-    echo ""
-fi
-echo "Happy coding! 🎉"
-echo ""
-EOFSTARTUP
-    
-    chmod +x $HOME/.startup_check.sh
-    
-    # Add to bashrc
-    cat >> $HOME/.bashrc << 'EOFBASHRC'
+echo "=== End of Check ==="
+BASH
 
-# Run startup check on first terminal
-if [ -z $STARTUP_CHECK_DONE ]; then
-    export STARTUP_CHECK_DONE=1
-    ~/.startup_check.sh
-fi
-
-# Ensure terminal starts in workshop directory
-if [ "$PWD" != "/workshop" ] && [ -d "/workshop" ]; then
-    cd /workshop
-fi
-
-# Auto-activate Blaize Bazaar virtual environment if available
-if [ -f "/workshop/blaize-bazaar/venv-blaize-bazaar/bin/activate" ] && [ -z "$VIRTUAL_ENV" ]; then
-    source /workshop/blaize-bazaar/venv-blaize-bazaar/bin/activate
-fi
-EOFBASHRC
-
+    chmod +x /workshop/startup_check.sh
     echo "Startup script created and configured"
 }
 
 function create_workshop_readme() {
-    if [ "$ENV_TYPE" != "code-editor" ]; then
-        return 0
-    fi
-    
     echo "Creating workshop README..."
     
-    cat > /workshop/README.md << EOFREADME
-# Welcome to the GenAI pgvector Workshop! 🚀
+    cat > /workshop/README.md << 'MARKDOWN'
+# GenAI pgvector Workshop Environment
 
-## 🗄️ Database Connection
+## Quick Start
 
-Your Aurora PostgreSQL database is automatically configured and ready to use!
-
-### Quick Database Commands:
-\`\`\`bash
-# Connect to PostgreSQL
+### Database Connection
+```bash
+# Connect to PostgreSQL (passwordless - credentials auto-loaded!)
 psql
 
-# Test database connection
-python3 test_connection.py
-\`\`\`
+# Or explicitly specify connection details
+psql -h $PGHOST -U $PGUSER -d postgres
 
-### Common psql Commands:
-\`\`\`sql
--- Once connected to psql:
-\l              -- List databases
-\dt             -- List tables
-\dx             -- List extensions
-\d table_name   -- Describe table
-\q              -- Quit psql
-\`\`\`
+# Test connection with Python
+python3 /workshop/test_connection.py
+```
 
-## 🎯 Getting Started
+### Blaize Bazaar Application
+```bash
+# Navigate to Blaize Bazaar
+cd /workshop/aurora-postgresql-pgvector/blaize-bazaar
 
-### 📋 Step 1: Enable Bedrock Model Access
-Before starting the lab, ensure you have enabled access to the required Bedrock models:
-1. Open the AWS Console in a new tab
-2. Navigate to Amazon Bedrock
-3. Go to "Model access" in the left menu
-4. Enable access to:
-   - Amazon Titan Embeddings V2
-   - Claude 3.5 Sonnet
-   - Other models as specified in your lab guide
+# Activate virtual environment
+source venv-blaize-bazaar/bin/activate
 
-### 📚 Step 2: Follow Lab Instructions
-Your workshop includes modules for:
-- Aurora PostgreSQL with pgvector setup
-- Semantic search implementation
-- Product recommendations
-- AI-powered applications
+# Run Streamlit app
+streamlit run Home.py --server.port 8501
+```
 
-## ℹ️ Environment Info
-- **Python**: 3.11 (default)
-- **PostgreSQL Client**: 16 (or 15)
-- **Database**: Aurora PostgreSQL 16 with pgvector
-- **Region**: ${AWS_REGION}
-- **Theme**: Dark mode enabled
-- **Git**: Disabled for workshop
+### Python Environment
+- **Global Python**: 3.11.9 at `/usr/local/bin/python3.11`
+- **Virtual Environment**: `/workshop/aurora-postgresql-pgvector/blaize-bazaar/venv-blaize-bazaar`
+- **Packages**: boto3, psycopg2, streamlit, langchain, and more
 
-## 📚 Helpful Resources
-- Database credentials are stored in AWS Secrets Manager
-- All required Python libraries are pre-installed
-- PostgreSQL connection is auto-configured on terminal start
+### Environment Variables
+All necessary environment variables are set in `~/.bashrc`:
+- Database: `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`
+- AWS: `AWS_REGION`, `AWS_ACCOUNTID`
+- Application: All vars in `/workshop/aurora-postgresql-pgvector/blaize-bazaar/.env`
 
-## 🔧 Troubleshooting
+### Passwordless PostgreSQL Access
+A `.pgpass` file has been created in your home directory for passwordless psql access.
+Simply type `psql` to connect - no password needed!
 
-### Streamlit Not Found?
-If you get "streamlit: command not found":
-\`\`\`bash
-# Option 1: Use the fix script
+### Useful Aliases
+- `psql` - Connect to PostgreSQL (passwordless!)
+- `pgversion` - Show PostgreSQL version
+- `activate-blaize` - Activate Blaize Bazaar venv
+- `run-blaize` - Run Streamlit app
+
+## Troubleshooting
+
+### Streamlit Issues
+```bash
+cd /workshop
 ./fix_streamlit.sh
+```
 
-# Option 2: Manual fix
-cd blaize-bazaar
-source venv-blaize-bazaar/bin/activate  # if virtual env exists
-python3 -m pip install streamlit plotly altair
+### Environment Check
+```bash
+/workshop/startup_check.sh
+```
 
-# Option 3: Use python module directly
-python3 -m streamlit run Home.py --server.port 8501
-\`\`\`
+### Database Connection Issues
+1. Verify environment variables: `echo $PGHOST`
+2. Test connection: `python3 /workshop/test_connection.py`
+3. Check security groups and network access
+4. Verify .pgpass file: `ls -la ~/.pgpass` (should be 600 permissions)
 
-### Python Command Not Found?
-\`\`\`bash
-# Use full path or python3
-/usr/local/bin/python3 --version
-python3 --version
-\`\`\`
+## Workshop Structure
+```
+/workshop/
+├── aurora-postgresql-pgvector/   # Main workshop repository
+│   ├── blaize-bazaar/            # Streamlit application
+│   │   ├── venv-blaize-bazaar/  # Python virtual environment
+│   │   ├── .env                  # Environment configuration
+│   │   └── Home.py               # Main Streamlit app
+│   ├── notebooks/                # Jupyter notebooks
+│   ├── scripts/                  # Helper scripts
+│   └── ...                       # Other workshop materials
+├── test_connection.py            # Database test script
+├── fix_streamlit.sh             # Streamlit troubleshooting
+├── startup_check.sh             # Environment validation
+└── README.md                    # This file
+```
 
-Happy coding! 🎉
-EOFREADME
-    
-    chmod 644 /workshop/README.md
-    chown $WORKSHOP_USER:$WORKSHOP_USER /workshop/README.md
+## Support
+For issues, refer to the workshop documentation or contact your instructor.
+MARKDOWN
+
     echo "Workshop README created at /workshop/README.md"
 }
 
-function check_installation()
+function copy_logs_to_s3()
 {
-    overall="True"
+    local region=${AWS_REGION:-us-west-2}
+    local account_id=${AWS_ACCOUNTID:-$(aws sts get-caller-identity --query Account --output text 2>/dev/null)}
+    local current_time=$(date +%s)
+    local bucket_name="genai-pgv-labs-${account_id}-${current_time}"
+    
+    print_line
+    
+    # Create S3 bucket
+    if aws s3 mb s3://${bucket_name} --region ${region} >/dev/null 2>&1; then
+        echo ${bucket_name}
+        
+        # Copy logs if they exist
+        if [ -f "/tmp/bootstrap.log" ]; then
+            aws s3 cp /tmp/bootstrap.log s3://${bucket_name}/ >/dev/null 2>&1 || \
+                echo "Failed to copy logfile to bucket ${bucket_name}"
+        else
+            echo "The user-provided path /tmp/bootstrap.log does not exist."
+            echo "Failed to copy logfile to bucket ${bucket_name}"
+        fi
+    else
+        echo "Failed to create S3 bucket ${bucket_name}"
+    fi
+}
+
+function run_final_checks()
+{
+    print_line
     
     # Check AWS Region
-    if [ -z "$AWS_REGION" ]; then
-        echo "AWS Region not set : NOTOK"
-        overall="False"
-    else
+    if [ -n "$AWS_REGION" ]; then
         echo "AWS Region set to $AWS_REGION : OK"
+    else
+        echo "Error: AWS Region not set : NOTOK"
     fi
     
     # Check AWS CLI
-    if aws sts get-caller-identity &> /dev/null; then
+    if command -v aws &> /dev/null; then
         echo "AWS CLI configuration : OK"
     else
-        echo "AWS CLI configuration : NOTOK"
-        overall="False"
+        echo "Error: AWS CLI not found : NOTOK"
     fi
     
     # Check PostgreSQL
-    if psql -c "select version()" | grep -q PostgreSQL; then
+    if command -v psql &> /dev/null; then
         echo "PostgreSQL installation : OK"
+        # Test connection
+        if [ -n "$PGHOST" ]; then
+            if PGPASSWORD=$PGPASSWORD psql -h $PGHOST -U $PGUSER -d postgres -c "SELECT 1" >/dev/null 2>&1; then
+                echo "PostgreSQL configuration : OK"
+            else
+                echo "Error: PostgreSQL connection failed : NOTOK"
+            fi
+        fi
     else
         echo "PostgreSQL installation : NOTOK"
-        echo "Error: $(psql -c "select version()" 2>&1)"
-        overall="False"
     fi
     
-    # Check PostgreSQL Configuration
-    if [ -n "$PGHOST" ] && [ -n "$PGUSER" ] && [ -n "$PGPASSWORD" ]; then
-        echo "PostgreSQL configuration : OK"
-    else
-        echo "PostgreSQL configuration : NOTOK (may be normal if no database)"
-    fi
-    
-    # Check Main Project Directory
-    MAIN_PROJ_DIR="${HOME}/environment/${PROJ_NAME}"
-    if [ "$ENV_TYPE" == "code-editor" ]; then
-        MAIN_PROJ_DIR="/workshop/${PROJ_NAME}"
-    fi
-    
-    if [ -d "$MAIN_PROJ_DIR" ]; then 
+    # Check main project
+    if [ -d "/workshop/$PROJ_NAME" ]; then
         echo "Main project directory : OK"
     else
-        echo "Main project directory : NOTOK (optional)"
+        echo "Main project directory : NOTOK"
     fi
-
-    # Check Blaize Bazaar Project Directory (optional)
-    if [ -d "/workshop/${BLAIZE_PROJ_NAME}/" ]; then 
+    
+    # Check Blaize Bazaar
+    if [ -d "$BLAIZE_PATH" ]; then
         echo "Blaize Bazaar project directory : OK"
     else
         echo "Blaize Bazaar project directory : NOTOK (optional)"
     fi
-
-    # Check Python Installation
-    if command -v python${PYTHON_MAJOR_VERSION} &> /dev/null; then
-        echo "Python${PYTHON_MAJOR_VERSION} installation : OK"
-        python${PYTHON_MAJOR_VERSION} --version
+    
+    # Check Python 3.11
+    if command -v /usr/local/bin/python3.11 &> /dev/null; then
+        echo "Python3.11 installation : OK"
+        /usr/local/bin/python3.11 --version
     else
-        echo "Python${PYTHON_MAJOR_VERSION} installation : NOTOK"
-        echo "Error: python${PYTHON_MAJOR_VERSION} command not found"
-        overall="False"
+        echo "Error: python3.11 command not found : NOTOK"
     fi
-
-    # Check Python3 Symlink
+    
+    # Check Python symlink
     if command -v python3 &> /dev/null; then
         echo "Python3 symlink : OK"
         python3 --version
     else
         echo "Python3 symlink : NOTOK"
-        echo "Error: python3 command not found"
-        overall="False"
     fi
-
-    # Check Virtual Environment (optional for Blaize Bazaar)
-    if [ -f "/workshop/${BLAIZE_PROJ_NAME}/venv-blaize-bazaar/bin/activate" ]; then
+    
+    # Check virtual environment
+    if [ -d "$BLAIZE_PATH/venv-blaize-bazaar" ]; then
         echo "Blaize Bazaar virtual environment : OK"
-        
-        # Check Required Python Packages
-        echo "Checking required Python packages..."
-        source "/workshop/${BLAIZE_PROJ_NAME}/venv-blaize-bazaar/bin/activate" &> /dev/null
-        required_packages=("psycopg2" "boto3" "pandas" "numpy" "streamlit")
-        for package in "${required_packages[@]}"; do
-            if ! pip show "$package" &> /dev/null; then
-                echo "Python package $package : NOTOK"
-                overall="False"
-            else
-                echo "Python package $package : OK"
-            fi
-        done
-        deactivate
     else
         echo "Blaize Bazaar virtual environment : NOTOK (optional)"
     fi
-
-    # Check Bedrock and S3 environment variables (optional)
-    if [ -n "$S3_KB_BUCKET" ] && [ -n "$BEDROCK_KB_ID" ] && [ -n "$BEDROCK_AGENT_ID" ] && [ -n "$BEDROCK_AGENT_ALIAS_ID" ]; then
+    
+    # Check Bedrock environment variables
+    if [ -n "$S3_KB_BUCKET" ] || [ -n "$BEDROCK_KB_ID" ] || [ -n "$BEDROCK_AGENT_ID" ]; then
         echo "Bedrock and S3 environment variables : OK"
     else
-        echo "Bedrock and S3 environment variables : NOTOK (optional)"
+        echo "Bedrock and S3 environment variables : Not configured (optional)"
     fi
-
-    # Code Editor specific checks
-    if [ "$ENV_TYPE" == "code-editor" ]; then
-        if [ -f "/workshop/test_connection.py" ]; then
-            echo "Database test script : OK"
-        else
-            echo "Database test script : NOTOK"
-        fi
-        
-        if [ -f "/workshop/fix_streamlit.sh" ]; then
-            echo "Streamlit fix script : OK"
-        else
-            echo "Streamlit fix script : NOTOK"
-        fi
-        
-        if [ -f "$HOME/.startup_check.sh" ]; then
-            echo "Startup check script : OK"
-        else
-            echo "Startup check script : NOTOK"
-        fi
+    
+    # Check helper scripts
+    if [ -f "/workshop/test_connection.py" ]; then
+        echo "Database test script : OK"
+    else
+        echo "Database test script : NOTOK"
     fi
-
+    
+    if [ -f "/workshop/fix_streamlit.sh" ]; then
+        echo "Streamlit fix script : OK"
+    else
+        echo "Streamlit fix script : NOTOK"
+    fi
+    
+    if [ -f "/workshop/startup_check.sh" ]; then
+        echo "Startup check script : OK"
+    else
+        echo "Startup check script : NOTOK"
+    fi
+    
+    # Overall status
     echo "=================================="
-    if [ "${overall}" == "True" ]; then
-        echo "✅ Overall status : OK"
+    if [ -d "/workshop/$PROJ_NAME" ] && command -v /usr/local/bin/python3.11 &> /dev/null && command -v psql &> /dev/null; then
+        echo "✅ Overall status : SUCCESS"
     else
         echo "⚠️  Overall status : FAILED (some optional components may be missing)"
     fi
     echo "=================================="
 }
 
-function cp_logfile()
-{
-    log_file="/tmp/bootstrap.log"
-    bucket_name="genai-pgv-labs-${AWS_ACCOUNT_ID}-`date +%s`"
-    echo ${bucket_name}
-    aws s3 ls | grep ${bucket_name} > /dev/null 2>&1
-    if [ $? -ne 0 ] ; then
-        aws s3 mb s3://${bucket_name} --region ${AWS_REGION}
-    fi
-
-    aws s3 cp ${log_file} s3://${bucket_name}/prereq_${AWS_ACCOUNT_ID}.txt > /dev/null 
-    if [ $? -eq 0 ] ; then
-	echo "Copied the logfile to bucket ${bucket_name}"
-    else
-	echo "Failed to copy logfile to bucket ${bucket_name}"
-    fi
-}
-
 ##############################################
-# MAIN PROGRAM
+# MAIN EXECUTION
 ##############################################
 
-if [ "${1}X" == "-xX" ] ; then
-    TERM="/dev/tty"
-else
-    TERM="/dev/null"
+if [ "X${TERM}" == "X" ]; then
+    TERM=/dev/null
 fi
 
 echo "=========================================="
@@ -1135,44 +1011,55 @@ echo "Environment: $ENV_TYPE"
 echo "User: $WORKSHOP_USER"
 echo "=========================================="
 echo "Process started at `date`"
-echo ""
 
+print_line
+
+# Run prerequisite checks and installations
 check_aws_cli || { echo "AWS CLI check failed"; exit 1; }
-install_packages || { echo "install_packages check failed"; exit 1; }
-
-export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text) 
 
 print_line
+
+install_packages
+
 git_clone
-print_line
-install_postgresql
-configure_pg
-print_line
-install_python3
-print_line
-setup_venv
-print_line
-set_bedrock_env_vars
+
 print_line
 
-# Code Editor specific setup
+install_python3
+
+print_line
+
+install_postgresql
+
+configure_pg
+
+print_line
+
+setup_venv
+
+print_line
+
+set_bedrock_env_vars
+
+print_line
+
 if [ "$ENV_TYPE" == "code-editor" ]; then
     echo "Running Code Editor specific setup..."
     setup_code_editor_bashrc
-    create_database_test_script
-    create_streamlit_fix_script
-    create_startup_script
+    create_db_test_script
+    create_streamlit_fix
+    create_startup_check
     create_workshop_readme
-    print_line
 fi
 
-check_installation
-cp_logfile
+print_line
 
-# Activate virtual environment as the last step (if available)
+run_final_checks
+
+copy_logs_to_s3
+
 activate_venv
 
-echo ""
 echo "=========================================="
 echo "✅ Process completed at `date`"
 echo "=========================================="
