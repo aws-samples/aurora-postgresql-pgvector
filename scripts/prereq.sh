@@ -873,7 +873,26 @@ MARKDOWN
 function copy_logs_to_s3()
 {
     local region=${AWS_REGION:-us-west-2}
-    local account_id=${AWS_ACCOUNTID:-$(aws sts get-caller-identity --query Account --output text 2>/dev/null)}
+    
+    # Get account ID with retry logic
+    local account_id="$AWS_ACCOUNTID"
+    if [ -z "$account_id" ] || [ "$account_id" == "unknown" ]; then
+        echo "Attempting to get AWS Account ID..."
+        for i in {1..3}; do
+            account_id=$(aws sts get-caller-identity --query Account --output text 2>/dev/null)
+            if [ -n "$account_id" ] && [ "$account_id" != "None" ] && [ "$account_id" != "null" ]; then
+                break
+            fi
+            echo "Attempt $i failed, retrying..."
+            sleep 5
+        done
+        
+        if [ -z "$account_id" ] || [ "$account_id" == "None" ] || [ "$account_id" == "null" ]; then
+            account_id="unknown-$(date +%s)"
+            echo "Could not get account ID, using: $account_id"
+        fi
+    fi
+    
     local current_time=$(date +%s)
     local bucket_name="genai-pgv-labs-${account_id}-${current_time}"
     
