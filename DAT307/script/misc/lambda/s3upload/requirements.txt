@@ -7,7 +7,7 @@ botocore==1.34.144
 certifi==2024.7.4
 cffi==1.16.0
 charset-normalizer==3.3.2
-cryptography==42.0.8
+cryptography==44.0.1
 dataclasses-json==0.6.7
 frozenlist==1.4.1
 idna==3.7
