@@ -17,7 +17,7 @@ jsonpatch==1.33
 jsonpointer==3.0.0
 langchain==0.2.8
 langchain-community==0.2.7
-langchain-core==0.2.20
+langchain-core==0.2.43
 langchain-postgres==0.0.9
 langchain-text-splitters==0.2.2
 langsmith==0.1.88
