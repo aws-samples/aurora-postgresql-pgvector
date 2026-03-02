@@ -1,7 +1,17 @@
 # Generative AI Use Cases with pgvector, Aurora PostgreSQL, and Amazon Bedrock
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT-0](https://img.shields.io/badge/License-MIT--0-yellow.svg)](https://spdx.org/licenses/MIT-0.html)
+<div align="center">
+
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Aurora PostgreSQL](https://img.shields.io/badge/Amazon-Aurora-527FFF?style=for-the-badge&logo=amazon-rds&logoColor=white)](https://aws.amazon.com/rds/aurora/)
+[![AWS Bedrock](https://img.shields.io/badge/AWS-Bedrock-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/bedrock/)
+[![pgvector](https://img.shields.io/badge/pgvector-0.8.0+-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
+[![MCP](https://img.shields.io/badge/MCP-Protocol-00A67E?style=for-the-badge)](https://modelcontextprotocol.io)
+
+![License](https://img.shields.io/badge/License-MIT_0-green?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Educational-blue?style=for-the-badge)
+
+</div>
 
 This repository contains the hands-on labs for the **[Generative AI with pgvector and Aurora PostgreSQL Workshop](https://catalog.workshops.aws/pgvector/en-US)**. Each lab demonstrates a production-relevant use case for [pgvector](https://github.com/pgvector/pgvector) on Amazon Aurora PostgreSQL, integrated with Amazon Bedrock foundation models.
 
@@ -89,4 +99,10 @@ The workshop's Code Editor (VS Code in browser) comes pre-configured with:
 
 ## License
 
+<div align="center">
+
 This project is licensed under the [MIT-0 License](LICENSE).
+
+[![Powered by AWS](https://img.shields.io/badge/Powered_by-AWS-FF9900?style=flat&logo=amazon-aws)](https://aws.amazon.com)
+
+</div>
