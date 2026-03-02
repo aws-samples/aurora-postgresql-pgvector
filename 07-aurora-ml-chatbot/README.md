@@ -25,12 +25,14 @@ Let's walk through the setup process systematically:
 ### Infrastructure Prerequisites
 
 1. Create your foundational resources:
+
    ```bash
    # First, create an S3 bucket for your knowledge dataset
    # Then, set up an Aurora PostgreSQL 15.5 database cluster
    ```
 
 2. Prepare your development environment:
+
    ```bash
    # Set up Cloud9 with appropriate permissions
    python3.9 -m venv env
@@ -38,9 +40,10 @@ Let's walk through the setup process systematically:
    ```
 
 3. Clone the repository:
+
    ```bash
    git clone https://github.com/aws-samples/aurora-postgresql-pgvector.git
-   cd aurora-postgresql-pgvector/05_AuroraML_Bedrock_Chatbot
+   cd aurora-postgresql-pgvector/07-aurora-ml-chatbot
    ```
 
 4. Install dependencies:
@@ -51,6 +54,7 @@ Let's walk through the setup process systematically:
 ### Configuration
 
 Create a `.env` file with your system details:
+
 ```bash
 POSTGRESQL_ENDPOINT="auroraml-bedrock-1.cluster-XXXXXX.us-east-1.rds.amazonaws.com"
 POSTGRESQL_PORT="5432"
@@ -68,17 +72,23 @@ Note: For production environments, always follow AWS security best practices for
 The system can be initialized and operated in four main steps:
 
 ### 1. System Configuration
+
 Initialize your database environment:
+
 ```bash
 python chatbot.py --configure
 ```
+
 This command sets up necessary extensions and prepares your database structure.
 
 ### 2. Knowledge Integration
+
 Load your knowledge base:
+
 ```bash
 python chatbot.py --ingest
 ```
+
 This step processes and stores your knowledge dataset in the database.
 
 ### 3. Interaction Modes
@@ -86,25 +96,33 @@ This step processes and stores your knowledge dataset in the database.
 Choose from three ways to interact with your chatbot:
 
 **Command Line Interface**
+
 ```bash
 python chatbot.py
 ```
+
 Perfect for quick testing and development.
 
 **PostgreSQL Client**
+
 ```sql
 postgres=> SELECT generate_text('What was the AWS run rate in year 2022?')
 ```
+
 Ideal for direct database interaction and testing.
 
 **Web Interface**
+
 ```bash
 streamlit run chatbot-app.py --server.port 8080
 ```
+
 Provides a user-friendly interface for broader accessibility.
 
 ### 4. Resource Management
+
 Clean up when finished:
+
 ```bash
 python chatbot.py --cleanup
 ```
@@ -121,6 +139,7 @@ Your chatbot processes queries through several sophisticated steps:
 ## 🛡️ Security Considerations
 
 For production deployments, always:
+
 - Implement proper authentication and authorization
 - Secure your database connections
 - Follow AWS security best practices for data protection
@@ -129,6 +148,7 @@ For production deployments, always:
 ## 📚 Learning Resources
 
 To deepen your understanding:
+
 - Explore [Aurora ML documentation](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-ml.html)
 - Learn about [Amazon Bedrock capabilities](https://aws.amazon.com/bedrock/)
 - Understand [pgvector](https://github.com/pgvector/pgvector) for similarity searches
