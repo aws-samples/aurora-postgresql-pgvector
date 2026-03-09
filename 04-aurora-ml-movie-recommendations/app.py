@@ -22,7 +22,7 @@ def write_columns_data(result):
         with col:
             st.image(
                 "https://image.tmdb.org/t/p/w185{}".format(movie.get('poster')),
-                use_container_width=True,
+                use_column_width=True,
             )
             st.caption(movie.get('title', ''))
 
@@ -62,7 +62,7 @@ def main():
         with col_poster:
             st.image(
                 "https://image.tmdb.org/t/p/w342{}".format(result[0].get('poster')),
-                use_container_width=True,
+                use_column_width=True,
             )
 
         with col_details:
