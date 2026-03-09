@@ -35,7 +35,7 @@ def main():
                 dbcur.execute("SELECT movie.get_reviews_summary(%s)", (result[0].get('id'), ))
                 res = dbcur.fetchall()
                 if res:
-                    st.write( res[0].get('get_reviews_summary').get('completion').replace(' Here is a summary of the key points from the text:\n\n-', '') )
+                    st.write( res[0].get('get_reviews_summary').get('content')[0].get('text') )
             st.divider()
             st.subheader('Top 5 Recommended Movies:')
             with st.container():
