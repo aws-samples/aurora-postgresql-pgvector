@@ -1,57 +1,111 @@
 import streamlit as st
-import pandas as pd
 import psycopg2
 import psycopg2.extras
 import os
-import json
 from dotenv import load_dotenv
 
+st.set_page_config(page_title="Movie Recommendations", page_icon="🎬", layout="wide")
+
+# Minimal custom styling
+st.markdown("""
+<style>
+    .stApp { max-width: 1200px; margin: 0 auto; }
+    div[data-testid="stImage"] img { border-radius: 8px; }
+</style>
+""", unsafe_allow_html=True)
+
+
 def write_columns_data(result):
-    col1, col2, col3, col4, col5 = st.columns(5)
-    colarray = [ col1, col2, col3, col4, col5 ]
-    for x in range(5):
-        colarray[x].image("https://image.tmdb.org/t/p/w185{}".format(result[x+1].get('poster')))
-    return
+    cols = st.columns(5)
+    for i, col in enumerate(cols):
+        movie = result[i + 1]
+        with col:
+            st.image(
+                "https://image.tmdb.org/t/p/w185{}".format(movie.get('poster')),
+                use_container_width=True,
+            )
+            st.caption(movie.get('title', ''))
+
 
 def main():
-    st.title(':orange[Movie Catalog Demo :cinema:]')
-    query = st.text_input('Search for a movie')
-    if query:
-        with psycopg2.connect(database=dbname, host=dbhost, port=dbport, user=dbuser, password=dbpass) as dbconn:
-            st.divider()
-            st.subheader('Top Matching Movie:')
-            dbcur = dbconn.cursor(cursor_factory = psycopg2.extras.RealDictCursor)
-            dbcur.execute("SELECT * FROM movie.get_top6_movies(%s);", (query,))
-            result = dbcur.fetchall()
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.subheader(result[0].get('title'))
-                st.image("https://image.tmdb.org/t/p/w185{}".format(result[0].get('poster')))
-            with col2:
-                st.subheader("Story")
-                st.write(result[0].get('overview'))
-            with col3:
-                st.subheader("Summary of user reviews")
-                dbcur.execute("SELECT movie.get_reviews_summary(%s)", (result[0].get('id'), ))
-                res = dbcur.fetchall()
-                if res:
-                    st.write( res[0].get('get_reviews_summary').get('content')[0].get('text') )
-            st.divider()
-            st.subheader('Top 5 Recommended Movies:')
-            with st.container():
-                write_columns_data(result)
-        st.divider()
-        
-if __name__ == '__main__':
+    st.title("🎬 Movie Recommendations")
+    st.caption("Powered by Aurora PostgreSQL, pgvector, and Amazon Bedrock")
 
-    # This function loads the environment variables from a .env file.
+    query = st.text_input(
+        "What kind of movie are you looking for?",
+        placeholder="e.g. Tom Cruise action movies, sci-fi space adventures, romantic comedies...",
+    )
+
+    if not query:
+        st.info("Enter a search above to find movies using semantic similarity search.")
+        return
+
+    with psycopg2.connect(
+        database=dbname, host=dbhost, port=dbport, user=dbuser, password=dbpass
+    ) as dbconn:
+        dbcur = dbconn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+        # Fetch top 6 matches
+        dbcur.execute("SELECT * FROM movie.get_top6_movies(%s);", (query,))
+        result = dbcur.fetchall()
+
+        if not result:
+            st.warning("No movies found. Try a different search.")
+            return
+
+        # --- Top match ---
+        st.divider()
+        st.subheader("Top Match")
+
+        col_poster, col_details = st.columns([1, 3])
+
+        with col_poster:
+            st.image(
+                "https://image.tmdb.org/t/p/w342{}".format(result[0].get('poster')),
+                use_container_width=True,
+            )
+
+        with col_details:
+            st.markdown(f"### {result[0].get('title')}")
+
+            with st.expander("Story", expanded=True):
+                st.write(result[0].get('overview'))
+
+            with st.expander("AI Review Summary", expanded=True):
+                with st.spinner("Generating review summary with Claude Sonnet 4.6..."):
+                    dbcur.execute(
+                        "SELECT movie.get_reviews_summary(%s)",
+                        (result[0].get('id'),),
+                    )
+                    res = dbcur.fetchall()
+                    if res:
+                        summary = (
+                            res[0]
+                            .get('get_reviews_summary', {})
+                            .get('content', [{}])[0]
+                            .get('text', 'No summary available.')
+                        )
+                        st.markdown(summary)
+                    else:
+                        st.write("No reviews available for this movie.")
+
+
+        # --- Recommended movies ---
+        if len(result) > 1:
+            st.divider()
+            st.subheader("You Might Also Like")
+            write_columns_data(result)
+
+        st.divider()
+
+
+if __name__ == '__main__':
     load_dotenv()
 
-    dbname=os.environ.get('DBNAME')
-    dbhost=os.environ.get('DBHOST')
-    dbuser=os.environ.get('DBUSER')
-    dbpass=os.environ.get('DBPASS')
-    dbport=os.environ.get('DBPORT')
+    dbname = os.environ.get('DBNAME')
+    dbhost = os.environ.get('DBHOST')
+    dbuser = os.environ.get('DBUSER')
+    dbpass = os.environ.get('DBPASS')
+    dbport = os.environ.get('DBPORT')
 
     main()
-
