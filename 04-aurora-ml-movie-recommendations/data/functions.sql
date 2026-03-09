@@ -113,13 +113,14 @@ SELECT regexp_replace(
 FROM movie.reviews
 WHERE id = p_movieid
 GROUP BY id;
-IF v_reviews IS NOT NULL THEN -- Summarize the reviews using Bedrock
+IF v_reviews IS NOT NULL THEN -- Use EXECUTE to avoid planner issues with aws_bedrock functions
+EXECUTE $q$
 SELECT aws_bedrock.invoke_model(
                 model_id := 'global.anthropic.claude-sonnet-4-6',
                 content_type := 'application/json',
                 accept_type := 'application/json',
-                model_input := '{"anthropic_version": "bedrock-2023-05-31", "max_tokens": 4096, "messages": [{"role": "user", "content": "Please provide a summary of the following movie reviews:\n' || v_reviews || '"}]}'
-        ) INTO v_summary;
+                model_input := $1
+        ) $q$ INTO v_summary USING '{"anthropic_version": "bedrock-2023-05-31", "max_tokens": 4096, "messages": [{"role": "user", "content": "Please provide a summary of the following movie reviews:\n' || v_reviews || '"}]}';
 ELSE -- Return a static response when no reviews exist
 v_summary := '{"content": [{"text": "No reviews are available for this movie.", "type": "text"}]}'::jsonb;
 END IF;
