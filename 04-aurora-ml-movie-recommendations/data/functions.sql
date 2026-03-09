@@ -87,49 +87,41 @@ COMMIT;
 END $$;
 CREATE OR REPLACE FUNCTION movie.get_reviews_summary(p_movieid bigint) RETURNS jsonb AS $$
 DECLARE v_summary jsonb;
-v_count int;
-BEGIN
-SELECT aws_bedrock.invoke_model(
-                model_id := 'global.anthropic.claude-sonnet-4-6',
-                content_type := 'application/json',
-                accept_type := 'application/json',
-                model_input := '{"anthropic_version": "bedrock-2023-05-31", "max_tokens": 4096, "messages": [{"role": "user", "content": "Please provide a summary of the following movie reviews:\n' || sub.reviews || '"}]}'
-        ) INTO v_summary
-FROM (
-                SELECT id,
+v_reviews text;
+BEGIN -- First collect the reviews text
+SELECT regexp_replace(
+                regexp_replace(
                         regexp_replace(
                                 regexp_replace(
-                                        regexp_replace(
-                                                regexp_replace(
-                                                        STRING_AGG(review, '\n'),
-                                                        E'[\\n\\r]+',
-                                                        '\n',
-                                                        'g'
-                                                ),
-                                                '[\\10|/10]',
-                                                ' out of 10',
-                                                'g'
-                                        ),
-                                        $y$ ['"-] $y$,
-                                        '',
+                                        STRING_AGG(review, '\n'),
+                                        E'[\\n\\r]+',
+                                        '\n',
                                         'g'
                                 ),
-                                '[^[:ascii:]]',
-                                '',
+                                '[\\10|/10]',
+                                ' out of 10',
                                 'g'
-                        ) as reviews
-                FROM movie.reviews
-                WHERE id = p_movieid
-                GROUP BY id
-        ) AS sub;
-GET DIAGNOSTICS v_count := ROW_COUNT;
-IF v_count = 0 THEN
+                        ),
+                        $y$ ['"-] $y$,
+                        '',
+                        'g'
+                ),
+                '[^[:ascii:]]',
+                '',
+                'g'
+        ) INTO v_reviews
+FROM movie.reviews
+WHERE id = p_movieid
+GROUP BY id;
+IF v_reviews IS NOT NULL THEN -- Summarize the reviews using Bedrock
 SELECT aws_bedrock.invoke_model(
                 model_id := 'global.anthropic.claude-sonnet-4-6',
                 content_type := 'application/json',
                 accept_type := 'application/json',
-                model_input := '{"anthropic_version": "bedrock-2023-05-31", "max_tokens": 4096, "messages": [{"role": "user", "content": "No reviews are available. Please state that."}]}'
+                model_input := '{"anthropic_version": "bedrock-2023-05-31", "max_tokens": 4096, "messages": [{"role": "user", "content": "Please provide a summary of the following movie reviews:\n' || v_reviews || '"}]}'
         ) INTO v_summary;
+ELSE -- Return a static response when no reviews exist
+v_summary := '{"content": [{"text": "No reviews are available for this movie.", "type": "text"}]}'::jsonb;
 END IF;
 RETURN v_summary;
 END $$ LANGUAGE plpgsql;
