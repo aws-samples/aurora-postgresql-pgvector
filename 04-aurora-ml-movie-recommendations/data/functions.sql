@@ -88,16 +88,12 @@ END $$;
 CREATE OR REPLACE FUNCTION movie.get_reviews_summary(p_movieid bigint) RETURNS jsonb AS $$
 DECLARE v_summary jsonb;
 v_reviews text;
-BEGIN -- First collect the reviews text
+v_payload text;
+BEGIN -- Collect and clean the reviews text
 SELECT regexp_replace(
                 regexp_replace(
                         regexp_replace(
-                                regexp_replace(
-                                        STRING_AGG(review, '\n'),
-                                        E'[\\n\\r]+',
-                                        '\n',
-                                        'g'
-                                ),
+                                regexp_replace(STRING_AGG(review, ' '), E'[\\n\\r]+', ' ', 'g'),
                                 '[\\10|/10]',
                                 ' out of 10',
                                 'g'
@@ -113,16 +109,30 @@ SELECT regexp_replace(
 FROM movie.reviews
 WHERE id = p_movieid
 GROUP BY id;
-IF v_reviews IS NOT NULL THEN -- Use EXECUTE to avoid planner issues with aws_bedrock functions
+IF v_reviews IS NOT NULL THEN -- Build JSON payload safely using jsonb functions to handle escaping
+v_payload := jsonb_build_object(
+        'anthropic_version',
+        'bedrock-2023-05-31',
+        'max_tokens',
+        4096,
+        'messages',
+        jsonb_build_array(
+                jsonb_build_object(
+                        'role',
+                        'user',
+                        'content',
+                        'Please provide a summary of the following movie reviews: ' || v_reviews
+                )
+        )
+)::text;
 EXECUTE $q$
 SELECT aws_bedrock.invoke_model(
                 model_id := 'global.anthropic.claude-sonnet-4-6',
                 content_type := 'application/json',
                 accept_type := 'application/json',
                 model_input := $1
-        ) $q$ INTO v_summary USING '{"anthropic_version": "bedrock-2023-05-31", "max_tokens": 4096, "messages": [{"role": "user", "content": "Please provide a summary of the following movie reviews:\n' || v_reviews || '"}]}';
-ELSE -- Return a static response when no reviews exist
-v_summary := '{"content": [{"text": "No reviews are available for this movie.", "type": "text"}]}'::jsonb;
+        ) $q$ INTO v_summary USING v_payload;
+ELSE v_summary := '{"content": [{"text": "No reviews are available for this movie.", "type": "text"}]}'::jsonb;
 END IF;
 RETURN v_summary;
 END $$ LANGUAGE plpgsql;
