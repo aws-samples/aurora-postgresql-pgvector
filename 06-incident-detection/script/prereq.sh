@@ -13,7 +13,9 @@ export BASEDIR=${HOME}/environment/${PROJ_NAME}
 export AWS_PAGER=""
 export TEMP_DIR=/tmp
 export USERNAME=demo@dat307.com
-export PASSWORD=Welcome@reInvent2024
+# Generate a random per-environment password for the demo Cognito user.
+# It is persisted to ~/.bashrc (as DEMO_PASSWORD) so the Streamlit UI can use it.
+export PASSWORD="$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 16)@Aa1"
 
 function check_cfn_status()
 {
@@ -153,6 +155,8 @@ function configure_env()
     echo "export APIGWURL=${APIGWURL}" >> /home/ec2-user/.bashrc
     echo "export APIGWSTAGE=${APIGWSTAGE}" >> /home/ec2-user/.bashrc
     echo "export APP_CLIENT_ID=${APP_CLIENT_ID}" >> /home/ec2-user/.bashrc
+    echo "export DEMO_USERNAME=${USERNAME}" >> /home/ec2-user/.bashrc
+    echo "export DEMO_PASSWORD='${PASSWORD}'" >> /home/ec2-user/.bashrc
     echo "export C9_URL=${C9_URL}" >> /home/ec2-user/.bashrc
     echo "export KB_IDR_S3=${KB_IDR_S3}" >> /home/ec2-user/.bashrc
     echo "export KB_QA_S3=${KB_QA_S3}" >> /home/ec2-user/.bashrc

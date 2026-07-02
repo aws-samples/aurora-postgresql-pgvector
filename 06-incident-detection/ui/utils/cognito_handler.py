@@ -8,10 +8,14 @@ load_dotenv()
 APP_CLIENT_ID=os.getenv('APP_CLIENT_ID')
 USER_POOL_ID = os.getenv('USER_POOL_ID')
 AWS_REGION=os.getenv('AWS_REGION')
+DEMO_USERNAME=os.getenv('DEMO_USERNAME')
+DEMO_PASSWORD=os.getenv('DEMO_PASSWORD')
 
 cognito_idp_client = boto3.client('cognito-idp', region_name=AWS_REGION)
-        
-def authenticate_user(username="demo@dat307.com", password="Welcome@reInvent2024"):
+
+def authenticate_user(username=None, password=None):
+    username = username or DEMO_USERNAME
+    password = password or DEMO_PASSWORD
     try:
         response = cognito_idp_client.initiate_auth(
             ClientId=APP_CLIENT_ID,

@@ -26,10 +26,6 @@ def login_page():
             st.image("image/incident_management.png")
         
         with col2:
-            #st.title("Login Page")
-            #email = st.text_input("E-mail",value="test1@test.com")
-            #password = st.text_input("Password", type="password",value="IDR@dat307")
-
             st.write("")
             st.write("")
             st.write("")
