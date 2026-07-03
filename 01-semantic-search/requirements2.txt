@@ -1,5 +1,5 @@
 sentence-transformers>=5.6.0
-pandas>=2.3.3,<3
-numpy>=2.1.0,<3
+pandas>=3.0.3,<4
+numpy>=2.5.0,<3
 torch>=2.12.1
 transformers>=5.13.0
