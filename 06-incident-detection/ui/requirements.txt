@@ -1,4 +1,4 @@
 boto3>=1.43.40
 python-dotenv>=1.2.2
-requests>=2.33.0
-streamlit>=1.54.0
+requests>=2.34.2
+streamlit>=1.58.0
