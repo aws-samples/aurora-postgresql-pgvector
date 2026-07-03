@@ -1,4 +1,4 @@
-FROM --platform=linux/x86_64 public.ecr.aws/lambda/python:3.12
+FROM --platform=linux/x86_64 public.ecr.aws/lambda/python:3.13
 RUN yum -y install openssl \
     coreutils \
     tar \
