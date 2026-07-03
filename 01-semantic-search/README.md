@@ -17,7 +17,7 @@ The notebook generates 768-dimensional embeddings and stores them in pgvector fo
 Create a Python environment and install both requirement files:
 
 ```bash
-python3.9 -m venv env
+python3.11 -m venv env
 source env/bin/activate
 pip install -r requirements1.txt
 pip install -r requirements2.txt

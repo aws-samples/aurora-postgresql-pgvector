@@ -1,6 +1,6 @@
 import streamlit as st 
 import chatbot as chatbot
-from langchain.memory import ConversationBufferWindowMemory
+from langchain_classic.memory import ConversationBufferWindowMemory
 
 st.set_page_config(page_title="AuroraML ChatBot")
 st.title("AuroraML ChatBot") 

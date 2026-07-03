@@ -53,7 +53,7 @@ Our application processes your documents and questions through a sophisticated p
    cd aurora-postgresql-pgvector/03-retrieval-augmented-generation/question-answering-opensource
 
    # Create and activate virtual environment
-   python3.9 -m venv env
+   python3.11 -m venv env
    source env/bin/activate
    ```
 

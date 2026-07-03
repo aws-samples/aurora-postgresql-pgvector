@@ -3,11 +3,11 @@ from dotenv import load_dotenv
 from PyPDF2 import PdfReader
 from langchain_community.embeddings import HuggingFaceInstructEmbeddings
 from langchain_community.llms import HuggingFaceHub
-from langchain.vectorstores.pgvector import PGVector
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationalRetrievalChain
+from langchain_postgres.vectorstores import PGVector
+from langchain_classic.memory import ConversationBufferMemory
+from langchain_classic.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template, user_template
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 import os
 
 def get_pdf_text(pdf_docs):

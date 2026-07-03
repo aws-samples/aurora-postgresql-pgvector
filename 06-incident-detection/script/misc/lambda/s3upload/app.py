@@ -6,9 +6,9 @@ import boto3
 from botocore.exceptions import ClientError
 from botocore.config import Config
 from langchain_community.document_loaders import S3FileLoader, JSONLoader, CSVLoader, TextLoader, UnstructuredMarkdownLoader
-from langchain_community.embeddings import BedrockEmbeddings
+from langchain_aws import BedrockEmbeddings
 from langchain_postgres.vectorstores import PGVector
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import AzureAIDocumentIntelligenceLoader
 from langchain_community.document_loaders import PyPDFLoader
 
@@ -88,5 +88,4 @@ def lambdaHandler(event, context):
         _doc.metadata['source'] = f's3://{bucket_name}/{object_key}'
     store.add_documents(chunks)
     return {'status': 'Success', 's3Uri': f's3://{bucket_name}/{object_key}'}
-
 

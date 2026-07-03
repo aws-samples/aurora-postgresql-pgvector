@@ -20,7 +20,7 @@ This lab demonstrates two approaches for product similarity search and recommend
 Install the notebook dependencies:
 
 ```bash
-python3.9 -m venv env
+python3.11 -m venv env
 source env/bin/activate
 pip install -r requirements.txt
 ```

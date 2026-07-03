@@ -43,7 +43,7 @@ Our system processes and recommends movies through these key steps:
 ```bash
 git clone https://github.com/aws-samples/aurora-postgresql-pgvector.git
 cd aurora-postgresql-pgvector/04-aurora-ml-movie-recommendations
-python3.9 -m venv env
+python3.11 -m venv env
 source env/bin/activate
 ```
 

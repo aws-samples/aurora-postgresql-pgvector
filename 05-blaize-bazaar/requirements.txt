@@ -1,9 +1,8 @@
-python-dotenv
-streamlit
-boto3
+python-dotenv>=1.2.2
+streamlit>=1.54.0
+boto3>=1.43.40
 streamlit_pdf_viewer
-psycopg[binary,pool]
+psycopg[binary,pool]>=3.3.4
 plotly
-numpy<2.0
-pandas
-uuid
+numpy>=1.26.4,<2.0
+pandas>=2.3.3,<3

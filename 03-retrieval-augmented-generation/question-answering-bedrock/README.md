@@ -64,7 +64,7 @@ Our RAG implementation follows a sophisticated pipeline to deliver accurate answ
 
 2. Create and activate a virtual environment:
    ```bash
-   python3.9 -m venv env
+   python3.11 -m venv env
    source env/bin/activate
    ```
 

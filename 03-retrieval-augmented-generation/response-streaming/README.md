@@ -52,7 +52,7 @@ Before we begin, ensure you have:
    cd aurora-postgresql-pgvector/03-retrieval-augmented-generation/response-streaming
 
    # Create an isolated Python environment
-   python3.9 -m venv env
+   python3.11 -m venv env
    source env/bin/activate
    ```
 

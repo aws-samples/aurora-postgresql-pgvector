@@ -1,0 +1,105 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /01-semantic-search
+    schedule:
+      interval: weekly
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /02-product-recommendations
+    schedule:
+      interval: weekly
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /03-retrieval-augmented-generation/question-answering-bedrock
+    schedule:
+      interval: weekly
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /03-retrieval-augmented-generation/question-answering-opensource
+    schedule:
+      interval: weekly
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /03-retrieval-augmented-generation/response-streaming
+    schedule:
+      interval: weekly
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /04-aurora-ml-movie-recommendations
+    schedule:
+      interval: weekly
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /05-blaize-bazaar
+    schedule:
+      interval: weekly
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /06-incident-detection/script/misc/lambda/s3upload
+    schedule:
+      interval: weekly
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: docker
+    directory: /06-incident-detection/script/misc/lambda/s3upload
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: pip
+    directory: /06-incident-detection/ui
+    schedule:
+      interval: weekly
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /07-aurora-ml-chatbot
+    schedule:
+      interval: weekly
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /08-valkey-chatbot
+    schedule:
+      interval: weekly
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
