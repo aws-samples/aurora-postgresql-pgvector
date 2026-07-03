@@ -34,10 +34,18 @@ async def get_product_price(productId):
     ) as aconn:
         async with aconn.cursor() as acur:
             await acur.execute(
-                # TO-DO: Implement the query
-                # Hint: Return productId, product_description, and price
+                """
+                SELECT "productId", product_description, price
+                FROM bedrock_integration.product_catalog
+                WHERE "productId" = %s
+                LIMIT 1;
+                """,
+                (productId,)
             )
-            return await acur.fetchone()
+            product = await acur.fetchone()
+            if not product:
+                return {"error": f"Product with ID {productId} not found"}
+            return product
 
 async def restock_product(productId, quantity):
     async with await psycopg.AsyncConnection.connect(

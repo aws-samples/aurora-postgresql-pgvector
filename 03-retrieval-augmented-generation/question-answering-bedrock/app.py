@@ -657,8 +657,14 @@ if __name__ == '__main__':
         BEDROCK_CLIENT = boto3.client("bedrock-runtime", aws_region)
         logger.info(f"Initialized Bedrock client in region: {aws_region}")
         
-        # Database connection string
-        connection = f"postgresql+psycopg://{os.getenv('PGUSER')}:{os.getenv('PGPASSWORD')}@{os.getenv('PGHOST')}:{os.getenv('PGPORT')}/{os.getenv('PGDATABASE')}"
+        # Database connection string. Prefer standard libpq env names, but
+        # keep PGVECTOR_* fallback for older workshop copies.
+        db_user = os.getenv('PGUSER') or os.getenv('PGVECTOR_USER')
+        db_password = os.getenv('PGPASSWORD') or os.getenv('PGVECTOR_PASSWORD')
+        db_host = os.getenv('PGHOST') or os.getenv('PGVECTOR_HOST')
+        db_port = os.getenv('PGPORT') or os.getenv('PGVECTOR_PORT') or "5432"
+        db_name = os.getenv('PGDATABASE') or os.getenv('PGVECTOR_DATABASE')
+        connection = f"postgresql+psycopg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
         
         main()
     except Exception as e:

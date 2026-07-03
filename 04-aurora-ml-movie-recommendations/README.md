@@ -41,7 +41,8 @@ Our system processes and recommends movies through these key steps:
 
 1. Clone and setup environment:
 ```bash
-git clone [repository-url]
+git clone https://github.com/aws-samples/aurora-postgresql-pgvector.git
+cd aurora-postgresql-pgvector/04-aurora-ml-movie-recommendations
 python3.9 -m venv env
 source env/bin/activate
 ```
@@ -70,17 +71,16 @@ CREATE EXTENSION aws_ml CASCADE;
 ```
 
 2. Initialize database:
-```sql
-CREATE DATABASE moviedb;
-\c moviedb
-\i data/movies.sql
-
-ALTER TABLE movie.movies ADD COLUMN movie_embedding vector(1536);
+```bash
+createdb moviedb
+gunzip -c data/movies.sql.gz | psql -d moviedb
+psql -d moviedb -f data/functions.sql
 ```
 
-3. Generate embeddings:
+3. Add the embedding column and generate embeddings:
 ```sql
--- See detailed SQL in Usage section for embedding generation
+ALTER TABLE movie.movies ADD COLUMN movie_embedding vector(1536);
+CALL movie.generate_movie_embeddings();
 ```
 
 ## 💻 Running the Application

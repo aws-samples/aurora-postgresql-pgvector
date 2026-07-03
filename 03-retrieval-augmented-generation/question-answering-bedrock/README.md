@@ -58,8 +58,8 @@ Our RAG implementation follows a sophisticated pipeline to deliver accurate answ
 
 1. Clone the repository:
    ```bash
-   git clone [repository-url]
-   cd [repository-name]
+   git clone https://github.com/aws-samples/aurora-postgresql-pgvector.git
+   cd aurora-postgresql-pgvector/03-retrieval-augmented-generation/question-answering-bedrock
    ```
 
 2. Create and activate a virtual environment:
@@ -71,12 +71,12 @@ Our RAG implementation follows a sophisticated pipeline to deliver accurate answ
 3. Configure environment variables:
    ```bash
    # Create .env file with the following structure
-   PGVECTOR_DRIVER='psycopg2'
-   PGVECTOR_USER='<username>'
-   PGVECTOR_PASSWORD='<password>'
-   PGVECTOR_HOST='<aurora-cluster-endpoint>'
-   PGVECTOR_PORT=5432
-   PGVECTOR_DATABASE='<database-name>'
+   PGUSER='<username>'
+   PGPASSWORD='<password>'
+   PGHOST='<aurora-cluster-endpoint>'
+   PGPORT=5432
+   PGDATABASE='<database-name>'
+   AWS_REGION='<aws-region>'
    ```
 
 4. Install dependencies:

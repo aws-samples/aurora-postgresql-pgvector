@@ -63,6 +63,8 @@ POSTGRESQL_PW="password"
 POSTGRESQL_DBNAME="dbname"
 REGION="aws-region-id"
 SOURCE_S3_BUCKET="knowledge-dataset-bucket-name"
+BEDROCK_MODEL_ID="global.anthropic.claude-sonnet-4-6"
+EMBEDDING_MODEL_ID="amazon.titan-embed-text-v1"
 ```
 
 Note: For production environments, always follow AWS security best practices for credential management and database configuration.

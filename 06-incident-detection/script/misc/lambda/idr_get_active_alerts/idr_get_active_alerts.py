@@ -2,9 +2,17 @@ import json
 import boto3
 from boto3.dynamodb.conditions import Attr
 import os
+from decimal import Decimal
+
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return int(obj) if obj % 1 == 0 else float(obj)
+        return super().default(obj)
+
 
 def lambda_handler(event, context):
-    # TODO implement
     print (event)
     print (context)
     
@@ -20,6 +28,5 @@ def lambda_handler(event, context):
     print (response)
     return {
         'statusCode': 200,
-        'body': json.dumps(response)
+        'body': json.dumps(response.get('Items', []), cls=DecimalEncoder)
     }
-

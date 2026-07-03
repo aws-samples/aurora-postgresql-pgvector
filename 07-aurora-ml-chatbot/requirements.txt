@@ -4,5 +4,6 @@ langchain
 langchain-community
 psycopg2-binary
 pypdf
+python-dotenv
 streamlit
 unstructured

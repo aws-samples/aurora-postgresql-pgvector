@@ -12,6 +12,8 @@ from botocore.config import Config
 from datetime import datetime
 import time
 import hashlib
+import hmac
+import secrets
 
 # Load environment variables and set up configurations
 load_dotenv()
@@ -85,8 +87,39 @@ def init_user_tables():
             conn.commit()
 
 def hash_password(password):
-    """Create a secure hash of the password"""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Create a salted password hash for demo-local accounts."""
+    salt = secrets.token_hex(16)
+    iterations = 120000
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode(),
+        salt.encode(),
+        iterations,
+    ).hex()
+    return json.dumps({
+        "algorithm": "pbkdf2_sha256",
+        "iterations": iterations,
+        "salt": salt,
+        "hash": digest,
+    })
+
+
+def verify_password(password, stored_hash):
+    """Verify current PBKDF2 hashes and legacy unsalted SHA-256 hashes."""
+    try:
+        payload = json.loads(stored_hash)
+        if payload.get("algorithm") != "pbkdf2_sha256":
+            return False
+        digest = hashlib.pbkdf2_hmac(
+            "sha256",
+            password.encode(),
+            payload["salt"].encode(),
+            int(payload["iterations"]),
+        ).hex()
+        return hmac.compare_digest(digest, payload["hash"])
+    except (TypeError, ValueError, KeyError, json.JSONDecodeError):
+        legacy_hash = hashlib.sha256(password.encode()).hexdigest()
+        return hmac.compare_digest(legacy_hash, stored_hash or "")
 
 def create_user(username, password):
     """Create a new user account"""
@@ -108,16 +141,17 @@ def create_user(username, password):
 
 def authenticate_user(username, password):
     """Authenticate user credentials"""
-    password_hash = hash_password(password)
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT user_id, username
+                SELECT user_id, username, password_hash
                 FROM bedrock_integration.users
-                WHERE username = %s AND password_hash = %s
-            """, (username, password_hash))
+                WHERE username = %s
+            """, (username,))
             result = cur.fetchone()
-            return result if result else None
+            if result and verify_password(password, result[2]):
+                return result[:2]
+            return None
 
 def save_user_preferences(user_id, categories, min_price, max_price):
     """Save or update user preferences"""

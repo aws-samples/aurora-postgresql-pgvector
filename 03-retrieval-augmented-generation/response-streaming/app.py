@@ -201,11 +201,11 @@ if __name__ == '__main__':
     # Create the connection string for pgvector. Ref: https://github.com/langchain-ai/langchain-postgres/blob/main/examples/vectorstore.ipynb
 
     # Create the connection string for pgvector. Ref: https://github.com/langchain-ai/langchain-postgres/blob/main/examples/vectorstore.ipynb
-    db_user = os.getenv('PGUSER')
-    db_password = os.getenv('PGPASSWORD')
-    db_host = os.getenv('PGHOST')
-    db_port = os.getenv('PGPORT')
-    db_name = os.getenv('PGDATABASE')
+    db_user = os.getenv('PGUSER') or os.getenv('PGVECTOR_USER')
+    db_password = os.getenv('PGPASSWORD') or os.getenv('PGVECTOR_PASSWORD')
+    db_host = os.getenv('PGHOST') or os.getenv('PGVECTOR_HOST')
+    db_port = os.getenv('PGPORT') or os.getenv('PGVECTOR_PORT') or "5432"
+    db_name = os.getenv('PGDATABASE') or os.getenv('PGVECTOR_DATABASE')
     connection = f"postgresql+psycopg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
 

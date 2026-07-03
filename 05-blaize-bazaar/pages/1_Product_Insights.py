@@ -182,10 +182,23 @@ def get_top_rated_categories(top_n=10):
     query = get_top_rated_categories.__doc__
     return execute_db_query(query, (top_n,))
 
-# TO-DO
 def get_best_selling_by_category(top_n=10):
     """
-    # TO-DO
+    WITH ranked_products AS (
+        SELECT product_description, category_name, boughtinlastmonth, stars, price,
+               ROW_NUMBER() OVER (
+                   PARTITION BY category_name
+                   ORDER BY boughtinlastmonth DESC NULLS LAST, stars DESC NULLS LAST
+               ) AS category_rank
+        FROM bedrock_integration.product_catalog
+        WHERE category_name IS NOT NULL
+          AND boughtinlastmonth IS NOT NULL
+    )
+    SELECT product_description, category_name, boughtinlastmonth, stars, price
+    FROM ranked_products
+    WHERE category_rank = 1
+    ORDER BY boughtinlastmonth DESC
+    LIMIT %s
     """
     query = get_best_selling_by_category.__doc__
     return execute_db_query(query, (top_n,))

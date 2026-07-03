@@ -23,8 +23,8 @@ export DefaultCodeRepository="${DefaultCodeRepository:-https://github.com/aws-sa
 export PROJ_NAME="aurora-postgresql-pgvector"
 
 # Blaize Bazaar configuration (now part of main repo)
-export BLAIZE_PROJ_NAME="blaize-bazaar"
-export BLAIZE_PATH="/workshop/aurora-postgresql-pgvector/blaize-bazaar"
+export BLAIZE_PROJ_NAME="05-blaize-bazaar"
+export BLAIZE_PATH="/workshop/aurora-postgresql-pgvector/${BLAIZE_PROJ_NAME}"
 
 # Python configuration
 export PYTHON_MAJOR_VERSION="3.11"
@@ -567,10 +567,10 @@ alias psql='psql -h $PGHOST -U $PGUSER -d postgres'
 alias pgversion='psql -c "SELECT version();"'
 
 # Virtual environment helper
-alias activate-blaize='cd /workshop/aurora-postgresql-pgvector/blaize-bazaar && source venv-blaize-bazaar/bin/activate'
+alias activate-blaize='cd /workshop/aurora-postgresql-pgvector/05-blaize-bazaar && source venv-blaize-bazaar/bin/activate'
 
 # Streamlit runner
-alias run-blaize='cd /workshop/aurora-postgresql-pgvector/blaize-bazaar && source venv-blaize-bazaar/bin/activate && streamlit run Home.py --server.port 8501'
+alias run-blaize='cd /workshop/aurora-postgresql-pgvector/05-blaize-bazaar && source venv-blaize-bazaar/bin/activate && streamlit run Home.py --server.port 8501'
 
 # Workshop banner
 echo "🚀 Welcome to GenAI pgvector Workshop!"
@@ -699,7 +699,7 @@ function create_streamlit_fix() {
 #!/bin/bash
 # Fix for Streamlit in Code Editor environment
 
-cd /workshop/aurora-postgresql-pgvector/blaize-bazaar
+cd /workshop/aurora-postgresql-pgvector/05-blaize-bazaar
 source venv-blaize-bazaar/bin/activate
 
 # Reinstall streamlit if needed
@@ -752,11 +752,11 @@ aws --version 2>/dev/null && echo "  ✅ Installed" || echo "  ❌ Not found"
 # Check directories
 echo "Workshop directories:"
 [ -d "/workshop/aurora-postgresql-pgvector" ] && echo "  ✅ Main repo cloned" || echo "  ❌ Main repo missing"
-[ -d "/workshop/blaize-bazaar" ] && echo "  ✅ Blaize Bazaar cloned" || echo "  ❌ Blaize Bazaar missing"
+[ -d "/workshop/aurora-postgresql-pgvector/05-blaize-bazaar" ] && echo "  ✅ Blaize Bazaar included" || echo "  ❌ Blaize Bazaar missing"
 
 # Check virtual environment
 echo "Virtual environment:"
-[ -d "/workshop/blaize-bazaar/venv-blaize-bazaar" ] && echo "  ✅ Created" || echo "  ❌ Not found"
+[ -d "/workshop/aurora-postgresql-pgvector/05-blaize-bazaar/venv-blaize-bazaar" ] && echo "  ✅ Created" || echo "  ❌ Not found"
 
 # Check database connection
 echo "Database connection:"
@@ -797,7 +797,7 @@ python3 /workshop/test_connection.py
 ### Blaize Bazaar Application
 ```bash
 # Navigate to Blaize Bazaar
-cd /workshop/aurora-postgresql-pgvector/blaize-bazaar
+cd /workshop/aurora-postgresql-pgvector/05-blaize-bazaar
 
 # Activate virtual environment
 source venv-blaize-bazaar/bin/activate
@@ -808,14 +808,14 @@ streamlit run Home.py --server.port 8501
 
 ### Python Environment
 - **Global Python**: 3.11.9 at `/usr/local/bin/python3.11`
-- **Virtual Environment**: `/workshop/aurora-postgresql-pgvector/blaize-bazaar/venv-blaize-bazaar`
+- **Virtual Environment**: `/workshop/aurora-postgresql-pgvector/05-blaize-bazaar/venv-blaize-bazaar`
 - **Packages**: boto3, psycopg2, streamlit, langchain, and more
 
 ### Environment Variables
 All necessary environment variables are set in `~/.bashrc`:
 - Database: `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`
 - AWS: `AWS_REGION`, `AWS_ACCOUNTID`
-- Application: All vars in `/workshop/aurora-postgresql-pgvector/blaize-bazaar/.env`
+- Application: All vars in `/workshop/aurora-postgresql-pgvector/05-blaize-bazaar/.env`
 
 ### Passwordless PostgreSQL Access
 A `.pgpass` file has been created in your home directory for passwordless psql access.
@@ -850,7 +850,7 @@ cd /workshop
 ```
 /workshop/
 ├── aurora-postgresql-pgvector/   # Main workshop repository
-│   ├── blaize-bazaar/            # Streamlit application
+│   ├── 05-blaize-bazaar/         # Streamlit application
 │   │   ├── venv-blaize-bazaar/  # Python virtual environment
 │   │   ├── .env                  # Environment configuration
 │   │   └── Home.py               # Main Streamlit app

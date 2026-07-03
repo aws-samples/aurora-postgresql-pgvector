@@ -2,13 +2,13 @@
 
 <div align="center">
 
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Aurora PostgreSQL](https://img.shields.io/badge/Amazon-Aurora-527FFF?style=for-the-badge&logo=amazon-rds&logoColor=white)](https://aws.amazon.com/rds/aurora/)
-[![AWS Bedrock](https://img.shields.io/badge/AWS-Bedrock-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/bedrock/)
-[![pgvector](https://img.shields.io/badge/pgvector-0.8.0+-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
-[![MCP](https://img.shields.io/badge/MCP-Protocol-00A67E?style=for-the-badge)](https://modelcontextprotocol.io)
+[![Python](https://img.shields.io/badge/Python-3.11.9-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Aurora PostgreSQL](https://img.shields.io/badge/Aurora-PostgreSQL-527FFF?style=for-the-badge&logo=amazonrds&logoColor=white)](https://aws.amazon.com/rds/aurora/)
+[![Amazon Bedrock](https://img.shields.io/badge/Amazon-Bedrock-FF9900?style=for-the-badge&logo=amazonwebservices&logoColor=white)](https://aws.amazon.com/bedrock/)
+[![pgvector](https://img.shields.io/badge/pgvector-enabled-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
+[![PostgreSQL Client](https://img.shields.io/badge/PostgreSQL-16_client-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 
-![License](https://img.shields.io/badge/License-MIT_0-green?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT--0-green?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Educational-blue?style=for-the-badge)
 
 </div>
@@ -19,7 +19,7 @@ This repository contains the hands-on labs for the **[Generative AI with pgvecto
 
 | Lab                                                               | Module                                 | Difficulty   | Description                                                                                                            |
 | ----------------------------------------------------------------- | -------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| [01 - Semantic Search](01-semantic-search/)                       | Semantic Search and Sentiment Analysis | Beginner     | Build a search engine that understands meaning and analyzes customer sentiment using Hugging Face models and Aurora ML |
+| [01 - Semantic Search](01-semantic-search/)                       | Semantic Search                        | Beginner     | Build a search engine that understands meaning using Hugging Face embeddings and Aurora PostgreSQL with pgvector       |
 | [02 - Product Recommendations](02-product-recommendations/)       | Product Recommendations                | Beginner     | Create a personalized product recommendation engine using Bedrock embeddings and similarity algorithms                 |
 | [03 - RAG](03-retrieval-augmented-generation/)                    | Retrieval Augmented Generation         | Intermediate | Implement a Q&A chatbot with accurate, grounded responses using RAG architecture                                       |
 | [04 - Movie Recommendations](04-aurora-ml-movie-recommendations/) | Aurora ML with Bedrock                 | Intermediate | Build a movie recommendation system using the `aws_ml` extension for in-database inference                             |
@@ -59,10 +59,9 @@ Refer to each lab's README for specific setup instructions and dependencies.
 
 ### Core Technologies
 
-- **Amazon Aurora PostgreSQL** with pgvector 0.8.0+
+- **Amazon Aurora PostgreSQL** with the pgvector extension
 - **Amazon Bedrock** for foundation models (Titan, Claude)
 - **Amazon SageMaker** for ML model hosting
-- **AWS MCP Servers** for AI-database interactions
 - **Amazon Bedrock Agents** for autonomous workflows
 
 ### Key Capabilities
@@ -78,7 +77,7 @@ Refer to each lab's README for specific setup instructions and dependencies.
 
 The workshop's Code Editor (VS Code in browser) comes pre-configured with:
 
-- Python 3.11 with ML/AI libraries
+- Python 3.11.9 with ML/AI libraries
 - PostgreSQL client tools with pgvector
 - AWS CLI and SDKs
 - Jupyter notebook support
@@ -87,8 +86,8 @@ The workshop's Code Editor (VS Code in browser) comes pre-configured with:
 
 - [AWS Blog: Leverage pgvector and Aurora PostgreSQL for NLP, Chatbots and Sentiment Analysis](https://aws.amazon.com/blogs/database/leverage-pgvector-and-amazon-aurora-postgresql-for-natural-language-processing-chatbots-and-sentiment-analysis/)
 - [AWS Blog: Supercharging Vector Search with pgvector 0.8.0](https://aws.amazon.com/blogs/database/supercharging-vector-search-performance-and-relevance-with-pgvector-0-8-0-on-amazon-aurora-postgresql/)
-- [AWS Blog: Database Development with AWS MCP Servers](https://aws.amazon.com/blogs/database/supercharging-aws-database-development-with-aws-mcp-servers/)
-- [PostgreSQL MCP Server Documentation](https://awslabs.github.io/mcp/servers/postgres-mcp-server/)
+- [Amazon Bedrock Documentation](https://docs.aws.amazon.com/bedrock/)
+- [Amazon Bedrock Agents Documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/agents.html)
 - [pgvector Official Repository](https://github.com/pgvector/pgvector)
 - [Amazon Aurora Documentation](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/)
 
@@ -103,6 +102,6 @@ The workshop's Code Editor (VS Code in browser) comes pre-configured with:
 
 This project is licensed under the [MIT-0 License](LICENSE).
 
-[![Powered by AWS](https://img.shields.io/badge/Powered_by-AWS-FF9900?style=flat&logo=amazon-aws)](https://aws.amazon.com)
+[![Powered by AWS](https://img.shields.io/badge/Powered_by-AWS-FF9900?style=flat&logo=amazonwebservices)](https://aws.amazon.com)
 
 </div>

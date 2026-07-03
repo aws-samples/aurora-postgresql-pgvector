@@ -7,6 +7,9 @@ import json
 import uuid
 import os
 import time
+import hashlib
+import hmac
+import secrets
 from botocore.exceptions import ClientError
 from redis.exceptions import RedisError
 from datetime import datetime
@@ -24,6 +27,8 @@ DB_HOST = os.getenv('DB_HOST')
 DB_NAME = os.getenv('DB_NAME')
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_PORT = int(os.getenv('DB_PORT', '5432'))
+EMBEDDING_MODEL_ID = os.getenv('BEDROCK_EMBEDDING_MODEL_ID', 'amazon.titan-embed-text-v1')
 
 # Initialize connections
 def init_connections():
@@ -80,7 +85,7 @@ def get_embedding(text):
     """Generate embeddings using Amazon Bedrock"""
     try:
         response = bedrock.invoke_model(
-            modelId="amazon.titan-embed-text-v2:0",
+            modelId=EMBEDDING_MODEL_ID,
             body=json.dumps({"inputText": text})
         )
         response_body = json.loads(response.get('body').read())
@@ -91,12 +96,14 @@ def get_embedding(text):
 
 def query_similar_texts(embedding, limit=3):
     """Query similar texts from Aurora PostgreSQL"""
+    embedding_literal = "[" + ",".join(str(value) for value in embedding) + "]"
     try:
         with psycopg.connect(
             host=DB_HOST,
             dbname=DB_NAME,
             user=DB_USER,
             password=DB_PASSWORD,
+            port=DB_PORT,
             row_factory=dict_row
         ) as conn:
             with conn.cursor() as cur:
@@ -106,7 +113,7 @@ def query_similar_texts(embedding, limit=3):
                     WHERE 1 - (embedding <-> %s::vector) > 0.7
                     ORDER BY embedding <-> %s::vector
                     LIMIT %s
-                """, (embedding, embedding, embedding, limit))
+                """, (embedding_literal, embedding_literal, embedding_literal, limit))
                 results = cur.fetchall()
                 if not results:
                     return []
@@ -331,11 +338,42 @@ def get_similar_texts_with_cache(search_cache, text, embedding, limit=3):
 
 
 # Authentication functions
+def hash_password(password):
+    salt = secrets.token_hex(16)
+    iterations = 120000
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode(),
+        salt.encode(),
+        iterations,
+    ).hex()
+    return json.dumps({
+        "algorithm": "pbkdf2_sha256",
+        "iterations": iterations,
+        "salt": salt,
+        "hash": digest,
+    })
+
+def verify_password(password, stored_hash):
+    try:
+        payload = json.loads(stored_hash)
+        if payload.get("algorithm") != "pbkdf2_sha256":
+            return False
+        digest = hashlib.pbkdf2_hmac(
+            "sha256",
+            password.encode(),
+            payload["salt"].encode(),
+            int(payload["iterations"]),
+        ).hex()
+        return hmac.compare_digest(digest, payload["hash"])
+    except (TypeError, ValueError, KeyError, json.JSONDecodeError):
+        return hmac.compare_digest(stored_hash or "", password)
+
 def authenticate_user(redis_client, username, password):
     try:
         if redis_client:
             stored = redis_client.hget(f"user:{username}", "password")
-            return stored and stored == password
+            return stored and verify_password(password, stored)
     except RedisError:
         return False
     return False
@@ -344,7 +382,7 @@ def register_user(redis_client, username, password):
     try:
         if redis_client:
             if not redis_client.hexists(f"user:{username}", "password"):
-                redis_client.hset(f"user:{username}", "password", password)
+                redis_client.hset(f"user:{username}", "password", hash_password(password))
                 return True
     except RedisError:
         return False

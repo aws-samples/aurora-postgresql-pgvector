@@ -2,6 +2,7 @@ import os
 import boto3
 import time
 import json
+from datetime import datetime
 
 boto3_session = boto3.session.Session()
 region = boto3_session.region_name
@@ -11,7 +12,7 @@ bedrock_agent_runtime_client = boto3.client('bedrock-agent-runtime')
 
 agent_id = os.environ.get('AGENTID', '2EOQS4ZE93')
 agent_alias_id = os.environ.get('AGENTALIASID', '135OAPMTED')
-dynamodb = boto3.client('dynamodb')
+dynamodb = boto3.resource('dynamodb')
 tableName = os.environ.get('CWALERTTABLE', 'cwalerttable_v2')
 table = dynamodb.Table(tableName)
 
@@ -22,7 +23,7 @@ def lambda_handler(event, context):
     sessionType = event['sessionType']
     DBInstanceIdentifier= event["DBInstanceIdentifier"]
     alertType = event["alertType"]
-    username = event.get('requestContext',{}).get('authorizer',{}).get('claims', {}).get('email')
+    username = event.get('requestContext',{}).get('authorizer',{}).get('claims', {}).get('email') or "unknown"
     
     if sessionId != "":
         response = bedrock_agent_runtime_client.invoke_agent(
@@ -44,6 +45,7 @@ def lambda_handler(event, context):
            )
     event_stream = response['completion']
     agent_answer = {"status": "Action completed successfully"}
+    agent_trace = "{}"
     print (response)
     time.sleep (10)
     for event in event_stream:
@@ -56,8 +58,25 @@ def lambda_handler(event, context):
         elif 'trace' in event:
             agent_trace = json.dumps(event['trace'], indent=2)
 
-    key = {"pk": {'S': sessionId}, 'sk': {'S': sessionType } }
-    response = table.update_item(Key=key, UpdateExpression = "set SessionStatus = :SessionStatus, incidentActionTrace = :incidentActionTrace, incidentActionResponse = :incidentActionResponse, lastUpdate = :lastUpdate, lastUpdateBy = :lastUpdateBy", ExpressionAttributeValues={":SessionStatus": 'R', ":incidentActionTrace": agent_trace, ":incidentActionResponse": agent_answer, ":lastUpdate": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), ":lastUpdateBy": username)}, ReturnValues="UPDATED_NEW", )
+    key = {"pk": sessionId, "sk": sessionType}
+    table.update_item(
+        Key=key,
+        UpdateExpression=(
+            "set SessionStatus = :SessionStatus, "
+            "incidentActionTrace = :incidentActionTrace, "
+            "incidentActionResponse = :incidentActionResponse, "
+            "lastUpdate = :lastUpdate, "
+            "lastUpdateBy = :lastUpdateBy"
+        ),
+        ExpressionAttributeValues={
+            ":SessionStatus": "R",
+            ":incidentActionTrace": agent_trace,
+            ":incidentActionResponse": agent_answer,
+            ":lastUpdate": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            ":lastUpdateBy": username,
+        },
+        ReturnValues="UPDATED_NEW",
+    )
 
     return {
         'statusCode': 200,

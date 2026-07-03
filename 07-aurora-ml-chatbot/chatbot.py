@@ -9,14 +9,17 @@ import logging
 import psycopg2
 import psycopg2.extras
 import argparse
+from dotenv import load_dotenv
 
 logger = logging.getLogger("chatbot")
 logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s : %(message)s', level=logging.INFO)
 logging.getLogger("botocore.credentials").disabled = True
 
+load_dotenv()
+
 # Model configurations
-BEDROCK_MODEL_ID="anthropic.claude-instant-v1"
-EMBEDDING_MODEL_ID="amazon.titan-embed-g1-text-02"
+BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "global.anthropic.claude-sonnet-4-6")
+EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v1")
 
 # Environment configurations
 POSTGRESQL_ENDPOINT=None
@@ -64,17 +67,20 @@ except KeyError as error:
 
 def get_database_connection():
     """ This function is responsible for getting a database connection."""
-    
-    session = boto3.Session()
-    client = session.client('rds')
-    
+
     try:
-        conn = psycopg2.connect(host=POSTGRESQL_ENDPOINT, 
-            port=POSTGRESQL_PORT, 
-            database=POSTGRESQL_DBNAME, 
-            user=POSTGRESQL_USER, 
-            password=POSTGRESQL_PW, 
-            sslrootcert="SSLCERTIFICATE")
+        conn_kwargs = {
+            "host": POSTGRESQL_ENDPOINT,
+            "port": POSTGRESQL_PORT,
+            "database": POSTGRESQL_DBNAME,
+            "user": POSTGRESQL_USER,
+            "password": POSTGRESQL_PW,
+        }
+        sslrootcert = os.getenv("POSTGRESQL_SSLROOTCERT")
+        if sslrootcert:
+            conn_kwargs["sslrootcert"] = sslrootcert
+
+        conn = psycopg2.connect(**conn_kwargs)
         conn.autocommit = True
         return conn
     except Exception as e:
@@ -136,7 +142,14 @@ def get_generate_text_func_sql():
             model_id    := '{1}',
             content_type:= 'application/json',
             accept_type := 'application/json',
-            model_input := json_build_object('prompt',prompt,'max_tokens_to_sample',4096,'temperature',0.5,'top_k',250,'top_p',0.5, 'stop_sequences',json_build_array())::text)
+            model_input := json_build_object(
+                'anthropic_version', 'bedrock-2023-05-31',
+                'max_tokens', 4096,
+                'temperature', 0.5,
+                'messages', json_build_array(
+                    json_build_object('role', 'user', 'content', prompt)
+                )
+            )::text)
         INTO response;
     
         RETURN response;
@@ -234,7 +247,14 @@ def generate_text(input_text):
             if row:
                 response_body = row[0][0]
                 response_json = json.loads(response_body)
-                completion = response_json["completion"]
+                if "completion" in response_json:
+                    completion = response_json["completion"]
+                elif "content" in response_json:
+                    completion = "".join(
+                        item.get("text", "")
+                        for item in response_json["content"]
+                        if item.get("type") == "text"
+                    )
                 
     except (Exception, psycopg2.DatabaseError) as error:
         logger.error(error)   
@@ -335,7 +355,10 @@ def ingest_and_embed():
 
 def extract_ans_xml(input_str):
     """ This function extracts response within <answer> xml tag."""
-    
+
+    if input_str is None:
+        return "No response generated."
+
     ans_xml = re.search(r'<answer>(.*\n*)*</answer>', input_str)
     answer = None
     if ans_xml:
@@ -349,11 +372,12 @@ def extract_ans_xml(input_str):
 
 def run_cli_mode():
     """ This function provides a commandline interface to run chatbot."""
-    
-    input_text = ""
-    print('To exit, enter "cntl+c" anytime!')
-    while input_text != "quit" or input_text != "q":
+
+    print('To exit, enter "q", "quit", or press Ctrl+C anytime.')
+    while True:
         input_text=input("\nEnter your question: ")
+        if input_text.strip().lower() in {"q", "quit"}:
+            break
         ask_question(input_text)
 
 def ask_question(input_text):

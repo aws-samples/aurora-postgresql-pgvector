@@ -1,24 +1,41 @@
-# Blaize Bazaar - Product Search with Bedrock Agent
+# Blaize Bazaar
 
-This module contains labs for building an AI-powered e-commerce product search using:
-- Amazon Aurora PostgreSQL with pgvector
-- Amazon Bedrock Agents
-- Streamlit for the web interface
+Blaize Bazaar is the e-commerce demo module for Aurora PostgreSQL with pgvector and Amazon Bedrock. It includes notebooks for loading and searching a product catalog plus a Streamlit app with product insights, recommendations, Knowledge Bases, and Bedrock Agents pages.
 
-## Source
-Adapted from AWS DAT301 re:Invent 2024 workshop
+## Included Notebooks
 
-## Labs Included
-1. Data Ingestion to Aurora PostgreSQL
-2. Product Catalog Search with Bedrock Agent
-3. Text Summarization with Flan-T5
-4. Intelligent Document Processing
+Run these from the `notebooks/` directory:
 
-## How to Use
-1. Start with notebooks in order (01, 02, 03, 04)
-2. Run the Streamlit app: `streamlit run Home.py`
+1. `Part 1_Building AI-Powered Semantic Product Search with pgvector and Amazon Bedrock.ipynb`
+2. `Part 2_Building AI-Powered Semantic Product Search with pgvector and Amazon Bedrock - Part 2.ipynb`
+3. `Part 3_Building AI-Powered Hybrid Product Search with pgvector and Amazon Bedrock - Part 2.ipynb`
+
+## Run the App
+
+```bash
+cd 05-blaize-bazaar
+python3 -m venv venv-blaize-bazaar
+source venv-blaize-bazaar/bin/activate
+pip install -r requirements.txt
+streamlit run Home.py --server.port 8501
+```
 
 ## Configuration
-Update the following for your environment:
-- Secret Name: `apgpg-pgvector-secret`
-- Stack Name: `genai-pgvector-labs-ProductSearchStack`
+
+Create `.env` with the values produced by the workshop bootstrap or your own stack:
+
+```bash
+DB_HOST=<aurora-endpoint>
+DB_PORT=5432
+DB_NAME=postgres
+DB_USER=<database-user>
+DB_PASSWORD=<database-password>
+AWS_REGION=<aws-region>
+BEDROCK_CLAUDE_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
+BEDROCK_KB_ID=<knowledge-base-id>
+BEDROCK_AGENT_ID=<agent-id>
+BEDROCK_AGENT_ALIAS_ID=<agent-alias-id>
+S3_KB_BUCKET=<knowledge-base-bucket>
+```
+
+The Knowledge Bases and Agents pages require the corresponding Bedrock resources. Product Insights and Product Recommendations require the `bedrock_integration.product_catalog` table created by the notebooks or workshop setup.

@@ -16,9 +16,9 @@ st.markdown("""
 
 
 def write_columns_data(result):
-    cols = st.columns(5)
-    for i, col in enumerate(cols):
-        movie = result[i + 1]
+    recommendations = result[1:6]
+    cols = st.columns(len(recommendations))
+    for movie, col in zip(recommendations, cols):
         with col:
             st.image(
                 "https://image.tmdb.org/t/p/w185{}".format(movie.get('poster')),
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     dbname = os.environ.get('DBNAME')
     dbhost = os.environ.get('DBHOST')
     dbuser = os.environ.get('DBUSER')
-    dbpass = os.environ.get('DBPASS')
+    dbpass = os.environ.get('DBPASSWORD') or os.environ.get('DBPASS')
     dbport = os.environ.get('DBPORT')
 
     main()

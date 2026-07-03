@@ -48,8 +48,8 @@ Before we begin, ensure you have:
 1. First, let's create a dedicated space for our application:
    ```bash
    # Clone this knowledge base to your local machine
-   git clone [repository-url]
-   cd [repository-name]
+   git clone https://github.com/aws-samples/aurora-postgresql-pgvector.git
+   cd aurora-postgresql-pgvector/03-retrieval-augmented-generation/response-streaming
 
    # Create an isolated Python environment
    python3.9 -m venv env
@@ -59,15 +59,13 @@ Before we begin, ensure you have:
 2. Now, we'll set up our configuration. Create a `.env` file with your credentials:
    ```bash
    # Essential configuration values for your application
-   HUGGINGFACEHUB_API_TOKEN='your-api-token'
-
    # Database connection details
-   PGVECTOR_DRIVER='psycopg2'
-   PGVECTOR_USER='your-username'
-   PGVECTOR_PASSWORD='your-password'
-   PGVECTOR_HOST='your-aurora-cluster-endpoint'
-   PGVECTOR_PORT=5432
-   PGVECTOR_DATABASE='your-database-name'
+   PGUSER='your-username'
+   PGPASSWORD='your-password'
+   PGHOST='your-aurora-cluster-endpoint'
+   PGPORT=5432
+   PGDATABASE='your-database-name'
+   AWS_REGION='your-aws-region'
    ```
 
 3. Install the tools our system needs:

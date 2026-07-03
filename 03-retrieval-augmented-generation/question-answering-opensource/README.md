@@ -49,8 +49,8 @@ Our application processes your documents and questions through a sophisticated p
 1. Set up your local development environment:
    ```bash
    # Clone the repository
-   git clone [repository-url]
-   cd [repository-name]
+   git clone https://github.com/aws-samples/aurora-postgresql-pgvector.git
+   cd aurora-postgresql-pgvector/03-retrieval-augmented-generation/question-answering-opensource
 
    # Create and activate virtual environment
    python3.9 -m venv env
