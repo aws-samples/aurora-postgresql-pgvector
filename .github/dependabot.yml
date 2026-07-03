@@ -2,6 +2,7 @@ version: 2
 updates:
   - package-ecosystem: pip
     directory: /01-semantic-search
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     groups:
@@ -11,6 +12,7 @@ updates:
 
   - package-ecosystem: pip
     directory: /02-product-recommendations
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     groups:
@@ -20,6 +22,7 @@ updates:
 
   - package-ecosystem: pip
     directory: /03-retrieval-augmented-generation/question-answering-bedrock
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     groups:
@@ -29,6 +32,7 @@ updates:
 
   - package-ecosystem: pip
     directory: /03-retrieval-augmented-generation/question-answering-opensource
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     groups:
@@ -38,6 +42,7 @@ updates:
 
   - package-ecosystem: pip
     directory: /03-retrieval-augmented-generation/response-streaming
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     groups:
@@ -47,6 +52,7 @@ updates:
 
   - package-ecosystem: pip
     directory: /04-aurora-ml-movie-recommendations
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     groups:
@@ -56,6 +62,7 @@ updates:
 
   - package-ecosystem: pip
     directory: /05-blaize-bazaar
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     groups:
@@ -65,6 +72,7 @@ updates:
 
   - package-ecosystem: pip
     directory: /06-incident-detection/script/misc/lambda/s3upload
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     groups:
@@ -74,11 +82,13 @@ updates:
 
   - package-ecosystem: docker
     directory: /06-incident-detection/script/misc/lambda/s3upload
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
 
   - package-ecosystem: pip
     directory: /06-incident-detection/ui
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     groups:
@@ -88,6 +98,7 @@ updates:
 
   - package-ecosystem: pip
     directory: /07-aurora-ml-chatbot
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     groups:
@@ -97,6 +108,7 @@ updates:
 
   - package-ecosystem: pip
     directory: /08-valkey-chatbot
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     groups:
