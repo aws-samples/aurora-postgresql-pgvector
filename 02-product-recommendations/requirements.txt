@@ -6,10 +6,10 @@ boto3>=1.43.40
 
 # PostgreSQL vector database
 psycopg>=3.3.4
-pgvector>=0.3.6,<0.4
+pgvector>=0.4.2,<0.5
 
 # Parallel processing for faster embedding generation
-pandarallel>=1.6.0
+pandarallel>=1.6.5
 
 # Note: pandas, numpy, ipython, jupyter are already installed in most environments
 # Note: setuptools, packaging, and other system packages are typically pre-installed

@@ -1,6 +1,6 @@
-psycopg2-binary>=2.9.10
-pgvector>=0.3.6,<0.4
-tqdm>=4.67.1
+psycopg2-binary>=2.9.12
+pgvector>=0.4.2,<0.5
+tqdm>=4.68.3
 boto3>=1.43.40
-requests>=2.33.0
-scikit-image>=0.25.0
+requests>=2.34.2
+scikit-image>=0.26.0
