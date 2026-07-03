@@ -1,8 +1,8 @@
 python-dotenv>=1.2.2
-streamlit>=1.54.0
+streamlit>=1.58.0
 boto3>=1.43.40
 streamlit_pdf_viewer
 psycopg[binary,pool]>=3.3.4
 plotly
-numpy>=1.26.4,<2.0
-pandas>=2.3.3,<3
+numpy>=2.5.0,<3.0
+pandas>=3.0.3,<4
