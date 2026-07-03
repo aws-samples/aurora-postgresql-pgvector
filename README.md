@@ -5,8 +5,8 @@
 [![Python](https://img.shields.io/badge/Python-3.11.9-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Aurora PostgreSQL](https://img.shields.io/badge/Aurora-PostgreSQL-527FFF?style=for-the-badge&logo=amazonrds&logoColor=white)](https://aws.amazon.com/rds/aurora/)
 [![Amazon Bedrock](https://img.shields.io/badge/Amazon-Bedrock-FF9900?style=for-the-badge&logo=amazonwebservices&logoColor=white)](https://aws.amazon.com/bedrock/)
-[![pgvector](https://img.shields.io/badge/pgvector-enabled-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
-[![PostgreSQL Client](https://img.shields.io/badge/PostgreSQL-16_client-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2B-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![pgvector](https://img.shields.io/badge/pgvector-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
 
 ![License](https://img.shields.io/badge/License-MIT--0-green?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Educational-blue?style=for-the-badge)
