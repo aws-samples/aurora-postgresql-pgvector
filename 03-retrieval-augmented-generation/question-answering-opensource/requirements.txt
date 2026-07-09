@@ -1,8 +1,8 @@
 streamlit>=1.54.0
 langchain>=1.3.11
-langchain-classic>=1.0.8
-langchain-community>=0.4.2
+langchain-huggingface>=0.2.0
 langchain-postgres>=0.0.17
+langchain-core>=1.4.8
 langchain-text-splitters>=1.1.2
 pypdf>=6.0.0
 python-dotenv>=1.2.2
@@ -11,7 +11,6 @@ altair>=5.4.1
 # langchain-postgres 0.0.17 declares pgvector<0.4; keep cap until that dep is lifted
 pgvector>=0.3.6,<0.4
 numpy>=2.1.0,<3
-huggingface_hub
-InstructorEmbedding
+huggingface_hub>=0.20.0
 sentence-transformers>=5.6.0
 urllib3>=2.7.0,<3

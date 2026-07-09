@@ -186,7 +186,15 @@ What was the AWS run rate in year 2022?
 **Direct SQL (psql or any PostgreSQL client):**
 
 ```sql
+-- Single-turn (history defaults to empty string)
 SELECT generate_text('What was the AWS run rate in year 2022?');
+
+-- Multi-turn: supply prior conversation as second argument
+SELECT generate_text(
+    'How did that compare to 2021?',
+    'Human: What was the AWS run rate in year 2022?
+Assistant: AWS reported a run rate of $62 billion in 2022.'
+);
 ```
 
 **Streamlit web interface:**
@@ -203,11 +211,23 @@ python chatbot.py --cleanup
 
 Drops the table, stored procedure, function, and extensions.
 
+## How this differs from Lab 04
+
+| Aspect | Lab 04 | Lab 07 |
+|---|---|---|
+| Primary focus | In-database batch embedding + semantic search UI | Full conversational RAG loop executed inside Aurora |
+| Retrieval | Top-1 nearest chunk | **Top-3 chunks** concatenated with `---` separators (`string_agg … LIMIT 3`) |
+| Conversation memory | None — every question is stateless | **Multi-turn history** — last N turns formatted as `Human:/Assistant:` lines and injected into the `<history>` slot of the in-database prompt |
+| Prompt hardening | Basic | Prompt-injection guards (`ypXwkq0qyGjv` sentinel, attack detection instructions) |
+| In-database inference | `aws_bedrock.invoke_model_get_embeddings` for embeddings | Both `invoke_model_get_embeddings` (embeddings) **and** `invoke_model` (generation) — the full RAG loop runs inside a single SQL function |
+| Aurora ML surface | `invoke_model_get_embeddings` only | Both functions from the `aws_ml` extension |
+| Converse API | Not applicable (Aurora ML) | Not applicable — `aws_ml` only exposes `invoke_model` / `invoke_model_get_embeddings`; the Anthropic `messages` payload is built directly in SQL via `json_build_object` |
+
 ## How It Works
 
 1. A user question is converted to a 1024-dimension embedding by Titan Embeddings V2 (via `aws_bedrock.invoke_model_get_embeddings` inside Aurora).
-2. The HNSW index performs a cosine-distance search (`<=>` operator) against all stored chunk embeddings to retrieve the most relevant context.
-3. The context and question are assembled into a prompt, and `aws_bedrock.invoke_model` calls Claude Sonnet to generate a grounded answer — all within a single PostgreSQL function call.
+2. The HNSW index performs a cosine-distance search (`<=>` operator) against all stored chunk embeddings to retrieve the **top 3** most-relevant chunks, which are concatenated into a single context block.
+3. The prior conversation history (last 6 turns) and the question are assembled into a hardened prompt, and `aws_bedrock.invoke_model` calls Claude Sonnet to generate a grounded answer — all within a single PostgreSQL function call.
 
 ## Security Considerations
 

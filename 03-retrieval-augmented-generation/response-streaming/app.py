@@ -14,9 +14,10 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts import SystemMessagePromptTemplate
 from langchain_core.prompts import HumanMessagePromptTemplate
 from langchain_postgres.vectorstores import PGVector
-from langchain_classic.chains import ConversationalRetrievalChain
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import ChatMessage
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
 import streamlit as st
 from dotenv import load_dotenv
 from PIL import Image
@@ -32,7 +33,7 @@ class StreamHandler(BaseCallbackHandler):
         self.text += token
         self.container.markdown(self.text)
 
-# This function takes the text chunks as input and creates a vector store using Bedrock Embeddings (Titan) and pgvector. 
+# This function takes the text chunks as input and creates a vector store using Bedrock Embeddings (Titan) and pgvector.
 # The vector store stores the vector representations of the text chunks, enabling efficient retrieval based on semantic similarity.
 def get_vectorstore(text_chunks):
     if text_chunks is None:
@@ -66,15 +67,15 @@ def main():
 
     if "messages" not in st.session_state:
         st.session_state["messages"] = []
-    
+
     # A header with the text appears at the top of the Streamlit application.
     st.header("Generative AI Streaming Chat with Amazon Bedrock, Aurora PostgreSQL and pgvector :books::parrot:")
     subheader = '<p style="font-family:Calibri (Body); color:Grey; font-size: 16px;">Leverage Foundational Models from <a href="https://aws.amazon.com/bedrock/">Amazon Bedrock</a> and <a href="https://github.com/pgvector/pgvector">pgvector</a> as Vector Engine</p>'
-    
+
     # Write the CSS style to the Streamlit application, allowing you to customize the appearance.
     st.markdown(subheader, unsafe_allow_html=True)
     st.image(Image.open("static/Streaming_Responses_RAG.png"))
-    
+
     # A chat message can be associated with an AI assistant, a human or a system role. Here we are displaying the question (asked by the human) and the response (answered by the AI assistant) alternately.
     for msg in st.session_state.messages:
         if msg.type == "human":
@@ -82,10 +83,6 @@ def main():
         if msg.type == "ai":
             st.chat_message("Assistant: ").write(msg.content)
 
-    # The text that you give Claude is designed to elicit, or "prompt", a relevant output. A prompt is usually in the form of a question or instructions. 
-    # When prompting Claude through the API, it is very important to use the correct \n\nHuman: and \n\nAssistant: formatting.
-    # Claude was trained as a conversational agent using these special tokens to mark who is speaking. 
-    # The \n\nHuman: (you) asks a question or gives instructions, and the\n\nAssistant: (Claude) responds.
     prompt = st.chat_input("Your question")
     if prompt:
         st.chat_message("user").write(prompt)
@@ -93,48 +90,56 @@ def main():
         with st.chat_message("Assistant"):
             stream_handler = StreamHandler(st.empty())
 
-            llm = ChatBedrock(model_id=os.environ.get("BEDROCK_MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0"), streaming=True, callbacks=[stream_handler], client=BEDROCK_CLIENT)
-            llm.model_kwargs = {"temperature": 0.5, "max_tokens": 8191}
+            llm = ChatBedrock(
+                model_id=os.environ.get("BEDROCK_MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0"),
+                streaming=True,
+                callbacks=[stream_handler],
+                client=BEDROCK_CLIENT,
+                model_kwargs={"temperature": 0.5, "max_tokens": 8191},
+            )
 
-            general_system_template = """ 
-            Human: "You are a helpful and talkative assistant that answers questions directly in only English and only using the information provided in the context below. 
+            general_system_template = """
+            Human: "You are a helpful and talkative assistant that answers questions directly in only English and only using the information provided in the context below.
             Guidance for answers:
                 - In your answers, always use a professional tone.
                 - Begin your answers with "Based on the context provided: "
                 - Simply answer the question clearly and with lots of detail using only the relevant details from the information below. If the context does not contain the answer, say "I don't know."
-                - Use bullet-points and provide as much detail as possible in your answer. 
+                - Use bullet-points and provide as much detail as possible in your answer.
                 - Always provide a summary at the end of your answer.
             ----
             {context}
             ----
 
             Assistant: """
-                
-            general_user_template = "Question:```{question}```"
 
-            messages = [
+            general_user_template = "Question:```{input}```"
+
+            qa_prompt = ChatPromptTemplate.from_messages([
                 SystemMessagePromptTemplate.from_template(general_system_template),
-                HumanMessagePromptTemplate.from_template(general_user_template)
-            ]
-                
-            qa_prompt = ChatPromptTemplate.from_messages(messages)
+                HumanMessagePromptTemplate.from_template(general_user_template),
+            ])
 
-            conversation_chain = ConversationalRetrievalChain.from_llm(
-                llm=llm,
-                chain_type="stuff",
-                combine_docs_chain_kwargs={"prompt": qa_prompt},
-                retriever=st.session_state.vectorDB.as_retriever(search_kwargs={"k": 1}),
+            # LCEL: create_stuff_documents_chain + create_retrieval_chain replace
+            # ConversationalRetrievalChain while preserving streaming callbacks.
+            docs_chain = create_stuff_documents_chain(llm, qa_prompt)
+            rag_chain = create_retrieval_chain(
+                st.session_state.vectorDB.as_retriever(search_kwargs={"k": 1}),
+                docs_chain,
             )
-                
-            response = conversation_chain.invoke({'question': prompt, 'chat_history':st.session_state.messages})
 
-            st.session_state.messages = st.session_state.messages + [HumanMessage(content = response["question"]), AIMessage(content = response["answer"])]
-    
+            response = rag_chain.invoke({"input": prompt})
+            answer = response.get("answer", "")
+
+            st.session_state.messages = st.session_state.messages + [
+                HumanMessage(content=prompt),
+                AIMessage(content=answer),
+            ]
+
     with st.sidebar:
         st.subheader("Your documents")
         pdf_docs = st.file_uploader(
             "Upload your PDFs here and click on 'Process'", type="pdf", accept_multiple_files=True)
-       
+
         # If the user clicks the "Process" button, the following code is executed:
         # i. raw_text = get_pdf_text(pdf_docs): retrieves the text content from the uploaded PDF documents.
         # ii. text_chunks = get_text_chunks(raw_text): splits the text content into smaller chunks for efficient processing.
@@ -151,7 +156,7 @@ def main():
                 st.session_state.vectorDB = get_vectorstore(text_chunks)
 
                 st.success('PDF uploaded successfully!', icon="✅")
-        
+
         with st.sidebar:
             st.divider()
 

@@ -169,7 +169,7 @@ def get_spending_habits():
 
 # Bedrock functions
 def generate_embedding(text):
-    body = json.dumps({"inputText": text})
+    body = json.dumps({"inputText": text, "dimensions": 1024, "normalize": True})
     modelId = 'amazon.titan-embed-text-v2:0'
     accept = 'application/json'
     contentType = 'application/json'
@@ -182,23 +182,12 @@ def generate_embedding(text):
 # Get Claude response
 def get_claude_response(prompt, max_tokens=4096):
     try:
-        body = json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": max_tokens,
-            "messages": [
-                {"role": "user", "content": prompt}
-            ]
-        })
-        
-        response = bedrock.invoke_model(
-            body=body,
+        response = bedrock.converse(
             modelId=CLAUDE_MODEL_ID,
-            accept="application/json",
-            contentType="application/json"
+            messages=[{"role": "user", "content": [{"text": prompt}]}],
+            inferenceConfig={"maxTokens": max_tokens}
         )
-        
-        response_body = json.loads(response.get('body').read())
-        return response_body['content'][0]['text']
+        return response["output"]["message"]["content"][0]["text"]
     except Exception as e:
         print(f"Claude error: {str(e)}")  # For debugging
         return None

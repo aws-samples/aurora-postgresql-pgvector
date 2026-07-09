@@ -87,6 +87,59 @@ Default model IDs (overridable via `BEDROCK_MODEL_ID`):
 | `DEMO_USERNAME`   | Demo Cognito username (email)                    |
 | `DEMO_PASSWORD`   | Demo Cognito password (set by `prereq.sh`)       |
 
+## Two agent implementations
+
+Lab 06 ships two fully functional agent implementations. The **classic Bedrock
+Agents** path is the guided workshop flow; the **Strands** path is a modern
+code-first alternative added in Phase 3.
+
+### Classic Bedrock Agents (guided lab path)
+
+Located in `lambda/idr-bedrock-agent-action-group-good.py` + the CloudFormation
+stack.
+
+- **Managed service:** the agent runtime, tool routing, and multi-turn memory
+  are all handled by the Bedrock Agents service; operators interact via
+  `invoke_agent`.
+- **Tool definition:** a 155-line OpenAPI schema JSON file declares each action;
+  a 550-line Lambda function handles all tool dispatch.
+- **Session model:** the workshop UI creates a new `uuid1` session ID on every
+  call, so context is not preserved between clicks. (A persistent session ID
+  would fix this, but it is kept simple for the demo.)
+- **Deployment:** Lambda ZIP deployment, IAM execution role, Bedrock Agent
+  resource, alias, action group, and Knowledge Base association — all managed
+  via CloudFormation.
+- **Best for:** production workloads where you want AWS-managed scaling,
+  CloudWatch tracing, and the Bedrock Agents governance model.
+
+### Strands Agents (code-first, `strands-agent/`)
+
+Located in [`strands-agent/`](strands-agent/).
+
+- **In-process Python:** the agent runs inside your application process using
+  the open-source `strands-agents` SDK. No managed service infrastructure
+  required.
+- **Tool definition:** ~40-line `@tool` decorated Python functions in
+  `agent.py` — docstrings become descriptions, type hints become the JSON
+  schema, no separate schema file needed.
+- **Session model:** one `Agent` instance per Streamlit browser session kept in
+  `st.session_state`. The agent's `.messages` list persists across all turns in
+  the session, giving real multi-turn continuity that contrasts directly with
+  the classic lab's per-click uuid1 pattern.
+- **Streaming:** `agent.stream_async()` yields tokens directly to the UI as
+  they arrive.
+- **Deployment path:** run locally with `streamlit run app.py`; deploy to
+  production via **Bedrock AgentCore**, which hosts Strands agents as a managed
+  containerised runtime with the same operational benefits as Bedrock Agents
+  (scaling, IAM, versioning) — without any Lambda or schema boilerplate.
+- **Best for:** rapid iteration, local development, integration into existing
+  Python services, or any scenario where you want the agent logic in source
+  control rather than a managed-service configuration.
+
+See [`strands-agent/README.md`](strands-agent/README.md) for setup, IAM
+requirements, environment variables, and the safety model (read-only SQL
+enforcement, confirm-gated mutations).
+
 ## Validation
 
 Before packaging Lambda functions, run:

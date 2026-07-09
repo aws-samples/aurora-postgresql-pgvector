@@ -7,20 +7,19 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from rag_shared import get_pdf_text as _get_pdf_text_core, get_text_chunks, build_pg_connection_string
 from htmlTemplates import css
 from langchain_postgres import PGVector
-from langchain_aws import BedrockEmbeddings
-from langchain_aws import ChatBedrock
-from langchain_core.prompts import PromptTemplate
+from langchain_aws import BedrockEmbeddings, ChatBedrockConverse
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
-from langchain_classic.base_memory import BaseMemory
-from langchain_classic.chains import ConversationalRetrievalChain
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_history_aware_retriever
 import streamlit as st
 import boto3
 from PIL import Image
-import json
 import time
 import logging
 import traceback
-from typing import Dict, Any, List, Optional
+from typing import List, Optional
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -32,28 +31,6 @@ DEFAULT_RETRIEVAL_K = 3
 TITLE = "Generative AI Q&A powered by Amazon Bedrock"
 ICON = "🤖"
 
-class SimpleChatMemory(BaseMemory):
-    """A simple chat memory implementation that doesn't require token counting."""
-    chat_history: List = []
-    
-    def clear(self):
-        """Clear memory contents."""
-        self.chat_history = []
-    
-    @property
-    def memory_variables(self) -> List[str]:
-        """Return memory variables."""
-        return ["chat_history"]
-    
-    def load_memory_variables(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        """Load memory variables."""
-        return {"chat_history": self.chat_history}
-    
-    def save_context(self, inputs: Dict[str, Any], outputs: Dict[str, Any]) -> None:
-        """Save context from this conversation to buffer."""
-        if inputs.get("question") and outputs.get("answer"):
-            self.chat_history.append(HumanMessage(content=inputs["question"]))
-            self.chat_history.append(AIMessage(content=outputs["answer"]))
 
 def get_pdf_text(pdf_docs) -> Optional[str]:
     """
@@ -103,10 +80,10 @@ def _get_text_chunks(text: Optional[str]) -> Optional[List[str]]:
 def get_vectorstore(text_chunks: Optional[List[str]]):
     """
     Create vector store using Bedrock Embeddings and pgvector.
-    
+
     Args:
         text_chunks: List of text chunks to be stored in vector database
-        
+
     Returns:
         Vector store instance or None if creation fails
     """
@@ -116,18 +93,18 @@ def get_vectorstore(text_chunks: Optional[List[str]]):
             client=BEDROCK_CLIENT,
             region_name=os.getenv('AWS_REGION', DEFAULT_REGION)
         )
-        
+
         if text_chunks is None:
             return PGVector(
                 connection=connection,
                 embeddings=embeddings,
                 use_jsonb=True
             )
-            
+
         chunks_with_metadata = []
         for i, chunk in enumerate(text_chunks):
             chunks_with_metadata.append((chunk, {"chunk_id": i}))
-            
+
         return PGVector.from_texts(
             texts=[text for text, _ in chunks_with_metadata],
             embedding=embeddings,
@@ -139,195 +116,144 @@ def get_vectorstore(text_chunks: Optional[List[str]]):
         st.error(f"Error creating vector store: {str(e)}")
         return None
 
-# Custom handler for Amazon Nova models
-class NovaLLM:
-    """Handler for Amazon Nova models using the converse API"""
-    
-    def __init__(self, model_id: str, client, max_tokens: int = 1000):
-        self.model_id = model_id
-        self.client = client
-        self.max_tokens = max_tokens
-    
-    def invoke(self, prompt: str) -> str:
-        """
-        Invoke the Nova model using the converse API
-        
-        Args:
-            prompt: The prompt text to send to the model
-            
-        Returns:
-            Generated text response from the model
-        """
-        try:
-            # Format messages for Nova models using converse method
-            messages = [
-                {"role": "user", "content": [{"text": prompt}]}
-            ]
-            
-            # Use the converse method
-            response = self.client.converse(
-                modelId=self.model_id,
-                messages=messages,
-                inferenceConfig={
-                    "maxTokens": self.max_tokens
-                }
-            )
-            
-            # Extract text from response following the exact path
-            return response["output"]["message"]["content"][0]["text"]
-        except Exception as e:
-            logger.error(f"Error invoking Nova model: {str(e)}")
-            return f"Error generating response: {str(e)}"
 
 def get_conversation_chain(vectorstore, model_selection: str):
     """
-    Create conversation chain using selected model.
-    
+    Build an LCEL retrieval chain using ChatBedrockConverse for all models
+    (Claude and Amazon Nova share one code path; only model_id differs).
+
     Args:
         vectorstore: Vector store for document retrieval
         model_selection: Selected model name
-        
+
     Returns:
-        Conversation chain function or None if creation fails
+        Callable that accepts {"question": str, "chat_history": list} and returns
+        {"answer": str, "source_documents": list, "chat_history": list}
+        or None if creation fails.
     """
     if not vectorstore:
         logger.error("Cannot create conversation chain: Vector store is None")
         return None
-        
+
     try:
-        # Model configurations based on selection
+        # Model configurations — ChatBedrockConverse works for both Claude and Nova
         model_config = {
             "Claude Sonnet 5": {
                 "model_id": os.environ.get("BEDROCK_MODEL_ID", "global.anthropic.claude-sonnet-5"),
-                "use_claude": True,
-                "model_kwargs": {
-                    "temperature": 0.5,
-                    "max_tokens": 8192,
-                    "top_p": 0.9,
-                    "top_k": 250
-                }
+                "temperature": 0.5,
+                "max_tokens": 8192,
             },
             "Amazon Nova Micro": {
                 "model_id": "us.amazon.nova-micro-v1:0",
-                "use_claude": False,
-                "max_tokens": 1000
+                "temperature": 0.5,
+                "max_tokens": 1000,
             },
             "Amazon Nova Lite": {
                 "model_id": "us.amazon.nova-lite-v1:0",
-                "use_claude": False,
-                "max_tokens": 1000
+                "temperature": 0.5,
+                "max_tokens": 1000,
             },
             "Amazon Nova Pro": {
                 "model_id": "us.amazon.nova-pro-v1:0",
-                "use_claude": False,
-                "max_tokens": 1000
-            }
+                "temperature": 0.5,
+                "max_tokens": 1000,
+            },
         }
-        
+
         if model_selection not in model_config:
             logger.error(f"Unknown model selection: {model_selection}")
             st.error(f"Unknown model: {model_selection}")
             return None
-            
-        selected_config = model_config[model_selection]
-        
-        # Shared prompt template for all models
-        prompt_template = """Human: You are a helpful AI assistant. Your role is to provide clear, concise answers using only the information from the context below.
 
-        Guidelines for your responses:
-        - Use English and maintain a professional yet conversational tone
-        - Start responses with "Based on the provided context: "
-        - Answer questions directly using only relevant details from the context
-        - If the context doesn't contain the answer, say "I apologize, but I don't find information about that in the provided context. Could you rephrase your question?"
-        - Use bullet points for clarity when appropriate
-        - Provide a brief summary at the end
-        
-        Context: {context}
+        cfg = model_config[model_selection]
 
-        Question: {question}
-        
-        Assistant: """
-        
-        PROMPT = PromptTemplate(
-            template=prompt_template,
-            input_variables=["context", "question"]
+        # Single LLM class for all Bedrock models (Claude + Nova)
+        llm = ChatBedrockConverse(
+            model=cfg["model_id"],
+            client=BEDROCK_CLIENT,
+            temperature=cfg["temperature"],
+            max_tokens=cfg["max_tokens"],
         )
-        
-        memory = SimpleChatMemory()
-        
-        # For Claude model
-        if selected_config["use_claude"]:
-            llm = ChatBedrock(
-                model_id=selected_config["model_id"],
-                client=BEDROCK_CLIENT,
-                model_kwargs=selected_config["model_kwargs"]
-            )
-            
-            conversation_chain = ConversationalRetrievalChain.from_llm(
-                llm=llm,
-                chain_type="stuff",
-                return_source_documents=True,
-                retriever=vectorstore.as_retriever(
-                    search_type="similarity",
-                    search_kwargs={"k": DEFAULT_RETRIEVAL_K, "include_metadata": True}
-                ),
-                get_chat_history=lambda h: h,
-                memory=memory,
-                combine_docs_chain_kwargs={'prompt': PROMPT}
-            )
-            return conversation_chain.invoke
-        
-        # For Amazon Nova models
-        else:
-            llm = NovaLLM(
-                model_id=selected_config["model_id"],
-                client=BEDROCK_CLIENT,
-                max_tokens=selected_config["max_tokens"]
-            )
-            
-            # Custom retrieval chain for Nova models
-            def nova_retrieval_chain(query_dict):
-                try:
-                    question = query_dict["question"]
-                    docs = vectorstore.as_retriever(
-                        search_type="similarity",
-                        search_kwargs={"k": DEFAULT_RETRIEVAL_K, "include_metadata": True}
-                    ).invoke(question)
-                    
-                    # Format the context from documents
-                    context = "\n\n".join([doc.page_content for doc in docs])
-                    
-                    # Log debug info
-                    logger.info(f"Retrieved {len(docs)} documents for query: {question[:50]}...")
-                    
-                    # Replace the variables in the prompt template
-                    formatted_prompt = PROMPT.format(context=context, question=question)
-                    
-                    # Get response from the model
-                    answer = llm.invoke(formatted_prompt)
-                    
-                    # Save to memory
-                    memory.save_context({"question": question}, {"answer": answer})
-                    
-                    # Return in the format expected by the app
-                    return {
-                        "question": question,
-                        "answer": answer,
-                        "source_documents": docs,
-                        "chat_history": memory.chat_history
-                    }
-                except Exception as e:
-                    logger.error(f"Error in nova_retrieval_chain: {str(e)}")
-                    logger.error(traceback.format_exc())
-                    return {
-                        "question": query_dict["question"],
-                        "answer": f"I encountered an error processing your question: {str(e)}",
-                        "source_documents": [],
-                        "chat_history": memory.chat_history
-                    }
-            
-            return nova_retrieval_chain
-        
+
+        retriever = vectorstore.as_retriever(
+            search_type="similarity",
+            search_kwargs={"k": DEFAULT_RETRIEVAL_K, "include_metadata": True},
+        )
+
+        # --- history-aware retriever ---
+        # Rewrites the user question given prior chat history so standalone
+        # retrieval works even in a multi-turn conversation.
+        condense_prompt = ChatPromptTemplate.from_messages([
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "{input}"),
+            ("human",
+             "Given the conversation above, generate a standalone search query "
+             "that captures the user's intent. Return only the query, no explanation."),
+        ])
+        history_aware_retriever = create_history_aware_retriever(
+            llm, retriever, condense_prompt
+        )
+
+        # --- answer chain ---
+        answer_prompt = ChatPromptTemplate.from_messages([
+            ("system",
+             "You are a helpful AI assistant. Your role is to provide clear, "
+             "concise answers using only the information from the context below.\n\n"
+             "Guidelines for your responses:\n"
+             "- Use English and maintain a professional yet conversational tone\n"
+             "- Start responses with 'Based on the provided context: '\n"
+             "- Answer questions directly using only relevant details from the context\n"
+             "- If the context doesn't contain the answer, say 'I apologize, but I don't "
+             "find information about that in the provided context. Could you rephrase your question?'\n"
+             "- Use bullet points for clarity when appropriate\n"
+             "- Provide a brief summary at the end\n\n"
+             "Context:\n{context}"),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "{input}"),
+        ])
+        docs_chain = create_stuff_documents_chain(llm, answer_prompt)
+
+        # Full retrieval chain
+        rag_chain = create_retrieval_chain(history_aware_retriever, docs_chain)
+
+        # Wrap into the dict shape the rest of the app expects:
+        # input:  {"question": str}   (chat_history injected from session_state)
+        # output: {"answer": str, "source_documents": list, "chat_history": list}
+        def chain_callable(query_dict: dict) -> dict:
+            question = query_dict["question"]
+            chat_history: list = query_dict.get("chat_history", [])
+            try:
+                result = rag_chain.invoke({
+                    "input": question,
+                    "chat_history": chat_history,
+                })
+                answer = result.get("answer", "")
+                source_docs = result.get("context", [])
+                new_history = list(chat_history) + [
+                    HumanMessage(content=question),
+                    AIMessage(content=answer),
+                ]
+                return {
+                    "question": question,
+                    "answer": answer,
+                    "source_documents": source_docs,
+                    "chat_history": new_history,
+                }
+            except Exception as exc:
+                logger.error(f"Error in chain_callable: {exc}")
+                logger.error(traceback.format_exc())
+                return {
+                    "question": question,
+                    "answer": f"I encountered an error processing your question: {exc}",
+                    "source_documents": [],
+                    "chat_history": list(chat_history) + [
+                        HumanMessage(content=question),
+                        AIMessage(content=f"Error: {exc}"),
+                    ],
+                }
+
+        return chain_callable
+
     except Exception as e:
         logger.error(f"Error creating conversation chain: {str(e)}")
         logger.error(traceback.format_exc())
@@ -337,39 +263,36 @@ def get_conversation_chain(vectorstore, model_selection: str):
 def handle_userinput(user_question: str):
     """
     Process user input and generate response.
-    
+
     Args:
         user_question: User's question text
     """
     if not user_question.strip():
         st.warning("Please enter a question.")
         return
-        
+
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
-    
+
     try:
         with st.spinner("Thinking..."):
             # Track processing time for metrics
             start_time = time.time()
-            
-            # Get conversation response
-            response = st.session_state.conversation({'question': user_question})
-            
+
+            # Get conversation response — pass current chat history so the
+            # history-aware retriever can condense the question if needed.
+            response = st.session_state.conversation({
+                "question": user_question,
+                "chat_history": st.session_state.chat_history,
+            })
+
             # Calculate processing time
             processing_time = time.time() - start_time
             logger.info(f"Processing time: {processing_time:.2f} seconds")
-            
-            # Update chat history
-            if 'chat_history' in response:
-                st.session_state.chat_history = response.get('chat_history', [])
-            elif 'answer' in response:
-                # Direct response without chat history, create chat history
-                if not st.session_state.chat_history:
-                    st.session_state.chat_history = []
-                st.session_state.chat_history.append(HumanMessage(content=user_question))
-                st.session_state.chat_history.append(AIMessage(content=response['answer']))
-            
+
+            # Update chat history from response
+            st.session_state.chat_history = response.get("chat_history", [])
+
             # Display messages with improved formatting
             messages_container = st.container()
             with messages_container:
@@ -379,17 +302,17 @@ def handle_userinput(user_question: str):
                     else:
                         with st.chat_message("assistant", avatar=ICON):
                             st.write(message.content)
-                            
+
                             # Show source documents (only for the most recent AI message)
                             if i == len(st.session_state.chat_history) - 1 and 'source_documents' in response:
                                 with st.expander("View sources"):
                                     for j, doc in enumerate(response['source_documents']):
                                         st.markdown(f"**Source {j+1}:**")
                                         st.markdown(f"```\n{doc.page_content[:300]}...\n```")
-                
+
             # Show processing time as a small note
             st.caption(f"Response generated in {processing_time:.2f} seconds")
-                    
+
     except Exception as e:
         logger.error(f"Error in handle_userinput: {str(e)}")
         logger.error(traceback.format_exc())
@@ -399,14 +322,14 @@ def reset_chat():
     """Reset the chat history and refresh the UI."""
     if "chat_history" in st.session_state:
         st.session_state.chat_history = []
-    
+
     # Re-initialize conversation with existing vectorstore
     if "vectorstore" in st.session_state and st.session_state.vectorstore:
         st.session_state.conversation = get_conversation_chain(
-            st.session_state.vectorstore, 
+            st.session_state.vectorstore,
             st.session_state.model_selection
         )
-    
+
     # This triggers a rerun to refresh the page and clear displayed messages
     st.rerun()
 
@@ -415,16 +338,16 @@ def init_session_state():
     # Check and initialize session state variables
     if "model_selection" not in st.session_state:
         st.session_state.model_selection = "Claude Sonnet 5"
-        
+
     if "vectorstore" not in st.session_state:
         st.session_state.vectorstore = get_vectorstore(None)
-        
+
     if "conversation" not in st.session_state:
         st.session_state.conversation = get_conversation_chain(
             st.session_state.vectorstore,
             st.session_state.model_selection
         )
-        
+
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
@@ -434,7 +357,7 @@ def display_sidebar():
         # Logo and title
         logo_url = "static/Powered-By_logo-stack_RGB_REV.png"
         st.image(logo_url, width=150)
-        
+
         # Quick start guide
         with st.expander("📖 Quick Start Guide", expanded=True):
             st.markdown("""
@@ -442,7 +365,7 @@ def display_sidebar():
             2. 🔄 Click 'Process'
             3. 💬 Ask questions about your documents
             """)
-        
+
         # Model selection dropdown
         st.subheader("🤖 Model Selection")
         model_options = [
@@ -451,14 +374,14 @@ def display_sidebar():
             "Amazon Nova Lite",
             "Amazon Nova Pro",
         ]
-        
+
         selected_model = st.selectbox(
             "Choose a model:",
             model_options,
             index=model_options.index(st.session_state.model_selection) if st.session_state.model_selection in model_options else 0,
             key="model_selector"
         )
-        
+
         # Update the model if changed
         if selected_model != st.session_state.model_selection:
             with st.spinner(f"Switching to {selected_model}..."):
@@ -466,11 +389,11 @@ def display_sidebar():
                 # Reinitialize the conversation with the new model
                 if "vectorstore" in st.session_state and st.session_state.vectorstore:
                     st.session_state.conversation = get_conversation_chain(
-                        st.session_state.vectorstore, 
+                        st.session_state.vectorstore,
                         st.session_state.model_selection
                     )
                     st.success(f"Switched to {selected_model}!", icon="✅")
-        
+
         # Document upload section
         st.subheader("📁 Document Upload")
         pdf_docs = st.file_uploader(
@@ -479,54 +402,54 @@ def display_sidebar():
             accept_multiple_files=True,
             help="Upload your PDF documents to ask questions about them"
         )
-        
+
         # Document processing and reset buttons
         col1, col2 = st.columns(2)
         with col1:
             process_button = st.button(
-                "🔄 Process", 
+                "🔄 Process",
                 type="primary",
                 help="Process the uploaded documents",
                 key="process_docs"
             )
-        
+
         with col2:
             # Reset chat button
             reset_button = st.button(
-                "🗑️ Reset Chat", 
+                "🗑️ Reset Chat",
                 type="secondary",
                 help="Clear the current conversation",
                 key="reset_chat"
             )
             if reset_button:
                 reset_chat()
-        
+
         # Process documents when button is clicked
         if process_button and pdf_docs:
             with st.spinner("Processing documents..."):
                 # Show a progress bar
                 progress_bar = st.progress(0)
-                
+
                 # Processing steps
                 progress_bar.progress(10, text="Reading PDF text...")
                 raw_text = get_pdf_text(pdf_docs)
-                
+
                 if raw_text:
                     progress_bar.progress(40, text="Creating text chunks...")
                     text_chunks = _get_text_chunks(raw_text)
-                    
+
                     if text_chunks:
                         progress_bar.progress(70, text="Building vector database...")
                         vectorstore = get_vectorstore(text_chunks)
-                        
+
                         if vectorstore:
                             progress_bar.progress(90, text="Initializing conversation chain...")
                             st.session_state.vectorstore = vectorstore
                             st.session_state.conversation = get_conversation_chain(
-                                vectorstore, 
+                                vectorstore,
                                 st.session_state.model_selection
                             )
-                            
+
                             progress_bar.progress(100, text="Done!")
                             st.success('Documents processed successfully!', icon="✅")
                         else:
@@ -535,13 +458,13 @@ def display_sidebar():
                         st.error("Error creating text chunks")
                 else:
                     st.error("Error processing PDFs")
-        
+
         # Show an error if process is clicked without documents
         elif process_button and not pdf_docs:
             st.error("Please upload at least one PDF document")
-            
+
         st.divider()
-        
+
         # Sample questions
         with st.expander("💡 Sample Questions", expanded=True):
             st.markdown("""
@@ -552,7 +475,7 @@ def display_sidebar():
             5. How does Knowledge Bases handle document chunking?
             6. Which vector databases work with Knowledge Bases?
             """)
-            
+
         # About section
         with st.expander("ℹ️ About", expanded=False):
             st.markdown("""
@@ -560,7 +483,7 @@ def display_sidebar():
             - Amazon Bedrock for LLM and embedding models
             - Aurora PostgreSQL with pgvector for vector storage
             - LangChain for the retrieval pipeline
-            
+
             Source: [GitHub Repository](https://github.com/aws-samples/aurora-postgresql-pgvector)
             """)
 
@@ -573,22 +496,22 @@ def main():
         page_icon=ICON,
         initial_sidebar_state="expanded"
     )
-    
+
     # Apply custom CSS
     st.write(css, unsafe_allow_html=True)
-    
+
     # Initialize session state
     init_session_state()
-    
+
     # Display sidebar
     display_sidebar()
 
     # Main content
     st.header(f"{ICON} {TITLE}")
-    
+
     # Subheader with model info
     st.subheader(f"Currently using: {st.session_state.model_selection}", divider="rainbow")
-    
+
     # Introductory text
     st.markdown(
         '<p style="font-size: 16px;">Leveraging '
@@ -606,7 +529,7 @@ def main():
     # Chat interface
     st.divider()
     st.subheader("💬 Chat with your documents")
-    
+
     # Input section
     user_question = st.text_input(
         "Ask about your documents:",
@@ -614,13 +537,13 @@ def main():
         key="question_input",
         on_change=None  # Explicitly set no callback
     )
-    
+
     # Search button
     col1, col2 = st.columns([1, 5])
     with col1:
         go_button = st.button(
-            "🔍 Search", 
-            type="primary", 
+            "🔍 Search",
+            type="primary",
             key="search_button",
             help="Search your documents with this question"
         )

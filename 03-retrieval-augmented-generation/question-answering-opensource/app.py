@@ -5,54 +5,106 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from rag_shared import get_pdf_text, get_text_chunks
 import streamlit as st
 from dotenv import load_dotenv
-from langchain_community.embeddings import HuggingFaceInstructEmbeddings
-from langchain_community.llms import HuggingFaceHub
+from langchain_huggingface import HuggingFaceEmbeddings, HuggingFaceEndpoint
 from langchain_postgres.vectorstores import PGVector
-from langchain_classic.memory import ConversationBufferMemory
-from langchain_classic.chains import ConversationalRetrievalChain
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_history_aware_retriever
 from htmlTemplates import css, bot_template, user_template
+
+# NOTE: A HUGGINGFACEHUB_API_TOKEN environment variable is required to use
+# the HuggingFace Inference API.  Add it to your .env file before running.
 
 
 def get_vectorstore(text_chunks):
-    embeddings = HuggingFaceInstructEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
+    # HuggingFaceEmbeddings from langchain-huggingface replaces the sunset
+    # langchain_community.embeddings.HuggingFaceInstructEmbeddings.
+    # all-mpnet-base-v2 produces 768-dim vectors — no schema change required.
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-mpnet-base-v2",
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True},
+    )
     if text_chunks is None:
         return PGVector(
-            connection_string=CONNECTION_STRING,
-            embedding_function=embeddings,
+            connection=CONNECTION_STRING,
+            embeddings=embeddings,
         )
-    return PGVector.from_texts(texts=text_chunks, embedding=embeddings, connection_string=CONNECTION_STRING)
+    return PGVector.from_texts(
+        texts=text_chunks,
+        embedding=embeddings,
+        connection=CONNECTION_STRING,
+    )
 
 
 def get_conversation_chain(vectorstore):
-    llm = HuggingFaceHub(repo_id="MBZUAI/LaMini-Flan-T5-783M", model_kwargs={"temperature":0.2, "max_length":4096})
-
-    memory = ConversationBufferMemory(
-        memory_key='chat_history', return_messages=True)
-    conversation_chain = ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        chain_type="stuff",
-        retriever=vectorstore.as_retriever(search_kwargs={"k": 1}),
-        memory=memory
+    # HuggingFaceEndpoint from langchain-huggingface replaces the sunset
+    # langchain_community.llms.HuggingFaceHub.
+    # zephyr-7b-beta supports text-generation via the HF Serverless Inference API.
+    llm = HuggingFaceEndpoint(
+        repo_id="HuggingFaceH4/zephyr-7b-beta",
+        task="text-generation",
+        temperature=0.2,
+        max_new_tokens=512,
     )
-    return conversation_chain
+
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 1})
+
+    # History-aware retriever: rewrites the question as a standalone query when
+    # there is prior chat history, so retrieval works across conversation turns.
+    condense_prompt = ChatPromptTemplate.from_messages([
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}"),
+        ("human",
+         "Given the conversation above, generate a standalone search query "
+         "that captures the user's intent. Return only the query, no explanation."),
+    ])
+    history_aware_retriever = create_history_aware_retriever(
+        llm, retriever, condense_prompt
+    )
+
+    # Answer chain
+    answer_prompt = ChatPromptTemplate.from_messages([
+        ("system",
+         "Answer the user's question using only the context below.\n\n"
+         "Context:\n{context}"),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}"),
+    ])
+    docs_chain = create_stuff_documents_chain(llm, answer_prompt)
+
+    return create_retrieval_chain(history_aware_retriever, docs_chain)
 
 
 def handle_userinput(user_question):
+    if "chat_history" not in st.session_state or st.session_state.chat_history is None:
+        st.session_state.chat_history = []
+
     try:
-        response = st.session_state.conversation({'question': user_question})
+        result = st.session_state.conversation.invoke({
+            "input": user_question,
+            "chat_history": st.session_state.chat_history,
+        })
     except ValueError:
         st.write("Sorry, please ask again in a different way.")
         return
 
-    st.session_state.chat_history = response['chat_history']
+    answer = result.get("answer", "")
 
+    # Append this turn to the explicit history list
+    st.session_state.chat_history = st.session_state.chat_history + [
+        HumanMessage(content=user_question),
+        AIMessage(content=answer),
+    ]
+
+    # Render history (alternating user / bot)
     for i, message in enumerate(st.session_state.chat_history):
-        if i % 2 == 0:
-            st.write(user_template.replace(
-                "{{MSG}}", message.content), unsafe_allow_html=True)
+        if isinstance(message, HumanMessage):
+            st.write(user_template.replace("{{MSG}}", message.content), unsafe_allow_html=True)
         else:
-            st.write(bot_template.replace(
-                "{{MSG}}", message.content), unsafe_allow_html=True)
+            st.write(bot_template.replace("{{MSG}}", message.content), unsafe_allow_html=True)
 
 
 def main():
@@ -62,18 +114,18 @@ def main():
     st.write(css, unsafe_allow_html=True)
 
     st.sidebar.markdown(
-    """
-    ### Instructions:
-    1. Browse and upload PDF files
-    2. Click Process
-    3. Type your question in the search bar to get more insights
-    """
-)
+        """
+        ### Instructions:
+        1. Browse and upload PDF files
+        2. Click Process
+        3. Type your question in the search bar to get more insights
+        """
+    )
 
     if "conversation" not in st.session_state:
         st.session_state.conversation = get_conversation_chain(get_vectorstore(None))
     if "chat_history" not in st.session_state:
-        st.session_state.chat_history = None
+        st.session_state.chat_history = []
 
     st.header("GenAI Q&A with pgvector and Amazon Aurora PostgreSQL :books::parrot:")
     user_question = st.text_input("Ask a question about your documents:")
@@ -100,6 +152,8 @@ def main():
 
                     # create conversation chain
                     st.session_state.conversation = get_conversation_chain(vectorstore)
+                    # reset history on new document upload
+                    st.session_state.chat_history = []
 
                     st.success('PDF uploaded successfully!', icon="✅")
 

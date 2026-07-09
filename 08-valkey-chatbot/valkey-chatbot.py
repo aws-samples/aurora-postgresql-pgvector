@@ -351,7 +351,7 @@ def register_user(redis_client, username, password):
     return False
 
 def generate_response_with_context(messages, user_prefs, chat_history=[]):
-    """Generate response with enhanced context and chat history"""
+    """Generate response with enhanced context and chat history using Converse stream API."""
     try:
         # Format preferences for context
         prefs_context = ""
@@ -362,44 +362,37 @@ def generate_response_with_context(messages, user_prefs, chat_history=[]):
                     pref_list.append(f"daily budget range: ${v[0]}-${v[1]}")
                 elif v:  # Only add non-budget preferences if they're True
                     pref_list.append(k)
-            
+
             if pref_list:
                 prefs_context = f"\nPlease consider these user preferences: {', '.join(pref_list)}"
-        
-        # Create the initial context message
-        system_context = (
+
+        # System prompt passed via the Converse 'system' parameter
+        system_prompt = (
             "You are a knowledgeable travel assistant. "
             "Provide detailed, relevant responses incorporating user preferences when applicable. "
             f"Focus on giving specific, actionable advice.{prefs_context}\n\n"
             "Maintain context from the conversation history when answering questions."
         )
 
-        # Format the chat history for context
-        conversation_history = ""
-        if chat_history:
-            conversation_history = "Previous conversation:\n" + "\n".join(
-                f"User: {msg['content']}" if msg['role'] == 'user' else f"Assistant: {msg['content']}"
-                for msg in chat_history
-            ) + "\n\n"
-
-        # Combine all context
-        full_context = f"{system_context}\n\n{conversation_history}Using this context:\n{messages[0]['content']}"
-        
-        # Create the messages array with full context
-        formatted_messages = [{
-            "role": "user",
-            "content": full_context
-        }]
-
-        return bedrock.invoke_model_with_response_stream(
-            modelId=os.environ.get('BEDROCK_MODEL_ID', 'us.anthropic.claude-haiku-4-5-20251001-v1:0'),
-            body=json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 1000,
-                "messages": formatted_messages,
-                "temperature": 0.7,
-                "top_p": 0.95,
+        # Build a multi-turn message list from chat history
+        converse_messages = []
+        for msg in chat_history:
+            converse_messages.append({
+                "role": msg["role"],
+                "content": [{"text": msg["content"]}]
             })
+
+        # Append current user message (already contains the RAG context)
+        converse_messages.append({
+            "role": "user",
+            "content": [{"text": messages[0]["content"]}]
+        })
+
+        return bedrock.converse_stream(
+            modelId=os.environ.get('BEDROCK_MODEL_ID', 'us.anthropic.claude-haiku-4-5-20251001-v1:0'),
+            messages=converse_messages,
+            system=[{"text": system_prompt}],
+            inferenceConfig={"maxTokens": 1000, "temperature": 0.7, "topP": 0.95}
         )
 
     except Exception as e:
@@ -607,15 +600,16 @@ def main():
                     try:
                         # Generate response with preferences and chat history
                         response = generate_response_with_context(messages, user_prefs, chat_history)
-                   
-                        for event in response['body']:
-                            chunk = json.loads(event['chunk']['bytes'].decode('utf-8'))
-                            if chunk['type'] == 'content_block_delta' and 'text' in chunk['delta']:
-                                full_response += chunk['delta']['text']
-                                response_container.markdown(full_response + "▌")
-                   
+
+                        for event in response["stream"]:
+                            if "contentBlockDelta" in event:
+                                delta = event["contentBlockDelta"].get("delta", {})
+                                if "text" in delta:
+                                    full_response += delta["text"]
+                                    response_container.markdown(full_response + "▌")
+
                         response_container.markdown(full_response)
-                   
+
                     except Exception as e:
                         st.error(f"Error generating response: {str(e)}")
                         return

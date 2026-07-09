@@ -31,6 +31,19 @@ knowledgeBaseId = os.environ.get('BEDROCK_KB_ID')
 # Define Claude model ID
 CLAUDE_MODEL_ID = os.environ.get('BEDROCK_CLAUDE_MODEL_ID', 'global.anthropic.claude-sonnet-5')
 
+
+def get_model_arn_for_kb(model_id, region_name):
+    """Build the modelArn retrieve_and_generate expects.
+
+    Cross-region inference profiles (global./us./eu. prefixes) use an
+    account-scoped inference-profile ARN; bare model IDs use the regional
+    foundation-model ARN.
+    """
+    if model_id.startswith(('global.', 'us.', 'eu.', 'apac.')):
+        account_id = boto3.client('sts').get_caller_identity()['Account']
+        return f"arn:aws:bedrock:{region_name}:{account_id}:inference-profile/{model_id}"
+    return f"arn:aws:bedrock:{region_name}::foundation-model/{model_id}"
+
 logo_url = "static/Blaize.png"
 st.sidebar.image(logo_url, width="stretch")
 
@@ -61,7 +74,7 @@ def getAnswers(questions, use_rag=True):
                         'type': 'KNOWLEDGE_BASE',
                         'knowledgeBaseConfiguration': {
                             'knowledgeBaseId': knowledgeBaseId,
-                            'modelArn': f"arn:aws:bedrock:{region}::foundation-model/{CLAUDE_MODEL_ID}",
+                            'modelArn': get_model_arn_for_kb(CLAUDE_MODEL_ID, region),
                             'generationConfiguration': {
                                 'inferenceConfig': {
                                     'textInferenceConfig': {
@@ -94,20 +107,14 @@ def getAnswers(questions, use_rag=True):
 def get_non_rag_response(questions):
     """Helper function for non-RAG responses"""
     try:
-        response = bedrockRuntime.invoke_model(
+        response = bedrockRuntime.converse(
             modelId=CLAUDE_MODEL_ID,
-            contentType='application/json',
-            accept='application/json',
-            body=json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 4096,
-                "messages": [
-                    {"role": "user", "content": questions}
-                ]
-            })
+            messages=[
+                {"role": "user", "content": [{"text": questions}]}
+            ],
+            inferenceConfig={"maxTokens": 4096}
         )
-        response_body = json.loads(response['body'].read())
-        return {"output": {"text": response_body['content'][0]['text']}}
+        return {"output": {"text": response["output"]["message"]["content"][0]["text"]}}
     except Exception as e:
         st.error(f"Non-RAG Error: {str(e)}")
         return None
