@@ -84,7 +84,7 @@ with st.sidebar:
     st.header("Configuration")
     st.markdown(f"**Region:** `{os.environ.get('AWS_REGION', 'us-west-2')}`")
     st.markdown(f"**Model:** `{os.environ.get('BEDROCK_MODEL_ID', 'global.anthropic.claude-sonnet-5')}`")
-    db_secret = os.environ.get("DB_SECRET_NAME", "(not set — uses {instance}-agent-secret pattern)")
+    db_secret = os.environ.get("DB_SECRET_NAME", "(not set — uses {db_instance_identifier}-agent-secret pattern)")
     st.markdown(f"**DB secret:** `{db_secret}`")
     st.divider()
     st.markdown(

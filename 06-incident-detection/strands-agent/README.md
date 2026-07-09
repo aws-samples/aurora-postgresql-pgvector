@@ -19,7 +19,7 @@ The agent monitors and remediates Aurora PostgreSQL performance incidents by:
 | Dimension | Classic Bedrock Agents (guided lab path) | Strands implementation (this directory) |
 |---|---|---|
 | **Agent runtime** | Managed AWS Bedrock Agents service | In-process Python via `strands-agents` SDK |
-| **Tool definition** | 155-line `openapi-schema.json` + 550-line Lambda handler | ~40-line `@tool` decorated functions in `agent.py` |
+| **Tool definition** | ~150-line function-definition JSON (`agent_action_group_for_acu.json`) + ~630-line Lambda handler | ~40-line `@tool` decorated functions in `agent.py` |
 | **Deployment artefacts** | Lambda ZIP, IAM execution role, Bedrock Agent resource, alias, action group, knowledge base association | Single Python file; run anywhere Python runs |
 | **Session continuity** | Classic lab re-creates a new `uuid1` session ID on every button click — context is lost | `Agent.messages` persists on the instance; one `Agent` per Streamlit session gives real multi-turn memory |
 | **Streaming** | Bedrock `invoke_agent` event stream, buffered in Lambda | `agent.stream_async()` yields tokens directly to the UI |
