@@ -49,6 +49,10 @@ jobs:
           print(f"All notebooks valid.")
           EOF
 
+  # NOTE: 06-incident-detection/strands-agent/requirements.txt is intentionally
+  # excluded from the matrix below — strands-agents pulls a large dependency
+  # tree that makes dry-run resolution slow; its .py files are covered by the
+  # python-compile job.
   requirements-resolve:
     name: Requirements dry-run (${{ matrix.requirements }})
     runs-on: ubuntu-latest

@@ -148,7 +148,7 @@ Key variables:
 | `POSTGRESQL_DBNAME` | Database name |
 | `REGION` | AWS region (e.g. `us-west-2`) |
 | `SOURCE_S3_BUCKET` | Bucket name containing your PDF knowledge base |
-| `BEDROCK_MODEL_ID` | Generation model — default `global.anthropic.claude-sonnet-5`; override with `global.anthropic.claude-sonnet-5` for the latest |
+| `BEDROCK_MODEL_ID` | Generation model — default `global.anthropic.claude-sonnet-5` |
 | `EMBEDDING_MODEL_ID` | Embeddings model — default `amazon.titan-embed-text-v2:0` (1024 dimensions) |
 
 ## Running the Chatbot

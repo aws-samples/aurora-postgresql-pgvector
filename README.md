@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Aurora PostgreSQL](https://img.shields.io/badge/Aurora-PostgreSQL-527FFF?style=for-the-badge&logo=amazonrds&logoColor=white)](https://aws.amazon.com/rds/aurora/)
 [![Amazon Bedrock](https://img.shields.io/badge/Amazon-Bedrock-FF9900?style=for-the-badge&logo=amazonwebservices&logoColor=white)](https://aws.amazon.com/bedrock/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2B-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18.3-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![pgvector](https://img.shields.io/badge/pgvector-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
 
 ![License](https://img.shields.io/badge/License-MIT--0-green?style=for-the-badge)
@@ -34,7 +34,7 @@ Use the hosted Workshop Studio experience when you want the fastest path through
 | [03 - RAG](03-retrieval-augmented-generation/) | Retrieval augmented generation | Q&A apps that retrieve context from pgvector and generate grounded responses | Aurora PostgreSQL, Amazon Bedrock, Streamlit |
 | [04 - Movie Recommendations](04-aurora-ml-movie-recommendations/) | Aurora ML | Movie recommendations using in-database calls to Bedrock-backed ML functions | Aurora PostgreSQL, Aurora ML, Amazon Bedrock |
 | [05 - Blaize Bazaar](05-blaize-bazaar/) | E-commerce app patterns | A catalog experience with semantic search, product insights, and recommendations | Aurora PostgreSQL, Amazon Bedrock, Streamlit |
-| [06 - Incident Detection](06-incident-detection/) | Operations and agents | Incident analysis, alert retrieval, and remediation workflows | Aurora PostgreSQL, Lambda, API Gateway, Bedrock Agents |
+| [06 - Incident Detection](06-incident-detection/) | Operations and agents | Incident analysis, alert retrieval, and remediation workflows | Aurora PostgreSQL, Lambda, API Gateway, Bedrock Agents, Strands Agents |
 | [07 - Aurora ML Chatbot](07-aurora-ml-chatbot/) | In-database chatbot | A chatbot that performs embedding search and generation from database-side functions | Aurora PostgreSQL, Aurora ML, Amazon Bedrock |
 | [08 - Valkey Chatbot](08-valkey-chatbot/) | Semantic caching | A travel chatbot with Aurora-backed retrieval and Valkey-backed response caching | Aurora PostgreSQL, ElastiCache for Valkey, Amazon Bedrock |
 
