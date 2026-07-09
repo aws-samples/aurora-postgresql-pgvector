@@ -1,125 +1,84 @@
-# 🤖 Intelligent Document Question-Answering System
+# Intelligent Document Question-Answering (Open-Source Stack)
 
-Welcome to our advanced Question-Answering application that harnesses the power of Retrieval Augmented Generation (RAG), pgvector, Aurora PostgreSQL, and Hugging Face technologies. This system enables natural language interactions with your PDF documents, providing precise answers drawn directly from your document collection.
+A RAG application using Hugging Face embeddings and an open-source LLM, backed by Aurora PostgreSQL with pgvector.
 
-## 💡 Key Features
+## Overview
 
-This application brings together several powerful technologies to create an intelligent document analysis system:
+- Hugging Face `sentence-transformers/all-mpnet-base-v2` for embeddings (via InstructorEmbeddings)
+- `MBZUAI/LaMini-Flan-T5-783M` from Hugging Face Hub for answer generation
+- Aurora PostgreSQL with pgvector for vector storage
+- LangChain for the retrieval pipeline
+- Streamlit for the user interface
 
-- Natural language question answering for PDF documents
-- Semantic search capabilities using vector embeddings
-- Scalable document processing with Aurora PostgreSQL
-- Integration with state-of-the-art Hugging Face language models
-- User-friendly interface built with Streamlit
-
-## 🏗️ Architecture
+## Architecture
 
 ![Architecture](static/APG-pgvector-streamlit.png)
 
-## 🔄 System Workflow
-
-Our application processes your documents and questions through a sophisticated pipeline:
-
-1. **Document Processing Engine** 📚
-   The system begins by carefully extracting text content from your PDF documents, maintaining the structural integrity and relationships within the content.
-
-2. **Intelligent Text Segmentation** ✂️
-   The extracted text undergoes smart segmentation, breaking down the content into optimally-sized chunks that preserve context and meaning. This process ensures that we maintain the semantic relationships within your documents.
-
-3. **Neural Embedding Generation** 🧠
-   Each text segment is transformed into a high-dimensional vector representation using advanced language models from Hugging Face. These embeddings capture the deep semantic meaning of your content.
-
-4. **Context-Aware Search** 🔍
-   When you pose a question, our system compares it against the entire document collection, identifying the most semantically relevant content through sophisticated vector similarity calculations.
-
-5. **AI-Powered Response Generation** ✨
-   The system synthesizes answers using selected relevant content, ensuring responses are accurate and grounded in your documents.
-
-## 🚀 Getting Started
-
-### System Requirements
+## Prerequisites
 
 - Python 3.9 or higher
-- PostgreSQL 14 or higher with pgvector extension
-- Hugging Face account with API access
-- Sufficient storage for document processing
+- A Hugging Face account with an API token
+- An Amazon Aurora PostgreSQL cluster with the `vector` extension installed
 
-### Installation Process
+## Installation
 
-1. Set up your local development environment:
+1. Clone the repository and navigate to this directory:
    ```bash
-   # Clone the repository
    git clone https://github.com/aws-samples/aurora-postgresql-pgvector.git
    cd aurora-postgresql-pgvector/03-retrieval-augmented-generation/question-answering-opensource
 
-   # Create and activate virtual environment
    python3.11 -m venv env
    source env/bin/activate
    ```
 
-2. Configure your environment variables:
-   ```bash
-   # Create a .env file with the following configuration
-   HUGGINGFACEHUB_API_TOKEN='your-api-token'
-
-   PGVECTOR_DRIVER='psycopg2'
-   PGVECTOR_USER='your-username'
-   PGVECTOR_PASSWORD='your-password'
-   PGVECTOR_HOST='your-aurora-cluster-endpoint'
-   PGVECTOR_PORT=5432
-   PGVECTOR_DATABASE='your-database-name'
-   ```
-
-3. Install required packages:
+2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-### Database Configuration
-
-Before running the application, set up your database environment:
-
-1. Connect to your Aurora PostgreSQL cluster
-2. Enable vector operations:
-   ```sql
-   CREATE EXTENSION vector;
+3. Configure environment variables:
+   ```bash
+   cp env.example .env
+   # Edit .env and fill in your values
    ```
 
-## 💻 Running the Application
+   Key variables (the app accepts both `PG*` and `PGVECTOR_*` prefixes):
+   ```
+   HUGGINGFACEHUB_API_TOKEN=<your-api-token>
 
-Launch the application using Streamlit:
+   PGVECTOR_USER=<username>
+   PGVECTOR_PASSWORD=<password>
+   PGVECTOR_HOST=<aurora-cluster-endpoint>
+   PGVECTOR_PORT=5432
+   PGVECTOR_DATABASE=<database-name>
+   ```
+
+## Database Setup
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+## Running the Application
+
 ```bash
 streamlit run app.py
 ```
 
-The system will guide you through:
-1. Uploading your PDF documents
-2. Processing and indexing the content
-3. Asking questions about your documents
+Upload PDF documents, click Process, then ask questions.
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Token Dimension Mismatch
 
-If you encounter an error related to token dimension mismatch (1536 vs 768), this typically indicates a version compatibility issue between model embeddings. Please refer to our detailed troubleshooting guide in the [GitHub Issue thread](https://github.com/hwchase17/langchain/issues/2219) for resolution steps.
+If you see an error about vector dimension mismatch (e.g. `expected 768, got 1536`), this means the embeddings stored in the database were generated by a different model than the one currently configured. Drop and recreate the `langchain_pg_embedding` table after switching models:
 
-## 🛡️ Best Practices
+```sql
+DROP TABLE IF EXISTS langchain_pg_embedding;
+```
 
-To get the most out of this application:
+Then re-upload your documents to regenerate embeddings with the current model.
 
-- Ensure your PDF documents are text-searchable
-- Monitor your Hugging Face API token usage
-- Regularly backup your vector database
-- Test with smaller document sets before processing large collections
+## License
 
-## 🤝 Community and Contributing
-
-While this repository serves educational purposes and doesn't accept direct contributions, we encourage you to:
-
-- Study the implementation patterns
-- Adapt the code for your specific use cases
-- Share your learnings with the community
-
-## 📜 License
-
-This project is licensed under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html), allowing you to use, modify, and distribute the code freely while maintaining attribution.
+[MIT-0 License](https://spdx.org/licenses/MIT-0.html)

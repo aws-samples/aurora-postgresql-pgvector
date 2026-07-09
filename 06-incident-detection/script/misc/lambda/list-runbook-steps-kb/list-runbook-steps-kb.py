@@ -7,12 +7,19 @@ region = boto3_session.region_name
 # create a boto3 bedrock client
 bedrock_agent_runtime_client = boto3.client('bedrock-agent-runtime')
 
-model_id = os.environ.get('MODELID', "anthropic.claude-3-5-sonnet-20240620-v1:0")
+# Cross-region inference profile; override via BEDROCK_MODEL_ID env var
+# global.anthropic.claude-sonnet-5 is also available as an override
+model_id = os.environ.get('BEDROCK_MODEL_ID', 'global.anthropic.claude-sonnet-5')
 kb_id = os.environ.get('KBID')
 if not kb_id:
     raise RuntimeError("KBID environment variable is required but not set.")
 
-model_arn = f'arn:aws:bedrock:{region}::foundation-model/{model_id}'
+# Cross-region inference profiles (us./eu./ap./global. prefix) use inference-profile ARN type
+model_arn = (
+    f'arn:aws:bedrock:{region}::inference-profile/{model_id}'
+    if model_id.startswith(('us.', 'eu.', 'ap.', 'global.'))
+    else f'arn:aws:bedrock:{region}::foundation-model/{model_id}'
+)
 
 def retrieveAndGenerate(input, kbId, model_arn, sessionId):
     print(input, kbId, model_arn, sessionId)

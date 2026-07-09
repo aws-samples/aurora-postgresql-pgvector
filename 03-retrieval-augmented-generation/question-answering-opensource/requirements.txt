@@ -4,11 +4,13 @@ langchain-classic>=1.0.8
 langchain-community>=0.4.2
 langchain-postgres>=0.0.17
 langchain-text-splitters>=1.1.2
-PyPDF2>=3.0.1
+pypdf>=6.0.0
 python-dotenv>=1.2.2
 psycopg[binary]>=3.3.4
 altair>=5.4.1
+# langchain-postgres 0.0.17 declares pgvector<0.4; keep cap until that dep is lifted
 pgvector>=0.3.6,<0.4
+numpy>=2.1.0,<3
 huggingface_hub
 InstructorEmbedding
 sentence-transformers>=5.6.0

@@ -1,8 +1,12 @@
 # Import libraries
 from dotenv import load_dotenv
-from PyPDF2 import PdfReader
+import sys
+import os
+# rag_shared lives one directory up from this app
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from rag_shared import get_pdf_text as _get_pdf_text_core, get_text_chunks, build_pg_connection_string
+from htmlTemplates import css
 from langchain_postgres import PGVector
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_aws import BedrockEmbeddings
 from langchain_aws import ChatBedrock
 from langchain_core.prompts import PromptTemplate
@@ -12,22 +16,18 @@ from langchain_classic.chains import ConversationalRetrievalChain
 import streamlit as st
 import boto3
 from PIL import Image
-import os
 import json
 import time
 import logging
 import traceback
 from typing import Dict, Any, List, Optional
-from htmlTemplates import css
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Constants
-DEFAULT_REGION = "us-east-1"
-DEFAULT_CHUNK_SIZE = 1000
-DEFAULT_CHUNK_OVERLAP = 200
+DEFAULT_REGION = "us-west-2"
 DEFAULT_RETRIEVAL_K = 3
 TITLE = "Generative AI Q&A powered by Amazon Bedrock"
 ICON = "🤖"
@@ -58,51 +58,41 @@ class SimpleChatMemory(BaseMemory):
 def get_pdf_text(pdf_docs) -> Optional[str]:
     """
     Extract text from uploaded PDF documents.
-    
+    Wraps rag_shared.get_pdf_text with Streamlit spinner/error handling.
+
     Args:
         pdf_docs: List of uploaded PDF files
-        
+
     Returns:
         Extracted text or None if processing fails
     """
     if not pdf_docs:
         return None
-        
-    text = ""
     try:
-        for pdf in pdf_docs:
-            with st.spinner(f"Processing {pdf.name}..."):
-                pdf_reader = PdfReader(pdf)
-                for page in pdf_reader.pages:
-                    text += page.extract_text()
-        return text
+        with st.spinner("Extracting text from PDFs..."):
+            text = _get_pdf_text_core(pdf_docs)
+        return text if text else None
     except Exception as e:
         logger.error(f"Error processing PDF: {str(e)}")
         st.error(f"Error processing PDF: {str(e)}")
         return None
 
-def get_text_chunks(text: Optional[str]) -> Optional[List[str]]:
+
+def _get_text_chunks(text: Optional[str]) -> Optional[List[str]]:
     """
     Split text into smaller chunks for processing.
-    
+    Wraps rag_shared.get_text_chunks with error handling.
+
     Args:
         text: Text to be split into chunks
-        
+
     Returns:
         List of text chunks or None if processing fails
     """
     if not text:
         return None
-        
     try:
-        # Optimized chunk size for LLMs
-        text_splitter = RecursiveCharacterTextSplitter(
-            separators=["\n\n", "\n", ".", " "],
-            chunk_size=DEFAULT_CHUNK_SIZE,
-            chunk_overlap=DEFAULT_CHUNK_OVERLAP,
-            length_function=len
-        )
-        chunks = text_splitter.split_text(text)
+        chunks = get_text_chunks(text)
         logger.info(f"Split text into {len(chunks)} chunks")
         return chunks
     except Exception as e:
@@ -207,8 +197,8 @@ def get_conversation_chain(vectorstore, model_selection: str):
     try:
         # Model configurations based on selection
         model_config = {
-            "Anthropic Claude 3 Sonnet": {
-                "model_id": "anthropic.claude-3-sonnet-20240229-v1:0",
+            "Claude Sonnet 5": {
+                "model_id": os.environ.get("BEDROCK_MODEL_ID", "global.anthropic.claude-sonnet-5"),
                 "use_claude": True,
                 "model_kwargs": {
                     "temperature": 0.5,
@@ -424,7 +414,7 @@ def init_session_state():
     """Initialize session state variables"""
     # Check and initialize session state variables
     if "model_selection" not in st.session_state:
-        st.session_state.model_selection = "Anthropic Claude 3 Sonnet"
+        st.session_state.model_selection = "Claude Sonnet 5"
         
     if "vectorstore" not in st.session_state:
         st.session_state.vectorstore = get_vectorstore(None)
@@ -453,20 +443,13 @@ def display_sidebar():
             3. 💬 Ask questions about your documents
             """)
         
-        # Warning for region setting
-        if os.getenv('AWS_REGION') not in [None, DEFAULT_REGION]:
-            st.warning(f"""
-            ⚠️ Amazon Nova models require {DEFAULT_REGION} region.
-            Current region setting may not work with Nova models.
-            """, icon="⚠️")
-        
         # Model selection dropdown
         st.subheader("🤖 Model Selection")
         model_options = [
-            "Anthropic Claude 3 Sonnet",
-            "Amazon Nova Micro", 
-            "Amazon Nova Lite", 
-            "Amazon Nova Pro"
+            "Claude Sonnet 5",
+            "Amazon Nova Micro",
+            "Amazon Nova Lite",
+            "Amazon Nova Pro",
         ]
         
         selected_model = st.selectbox(
@@ -530,7 +513,7 @@ def display_sidebar():
                 
                 if raw_text:
                     progress_bar.progress(40, text="Creating text chunks...")
-                    text_chunks = get_text_chunks(raw_text)
+                    text_chunks = _get_text_chunks(raw_text)
                     
                     if text_chunks:
                         progress_bar.progress(70, text="Building vector database...")
@@ -651,21 +634,15 @@ if __name__ == '__main__':
     try:
         # Load environment variables
         load_dotenv()
-        
+
         # Initialize AWS Bedrock client
         aws_region = os.getenv('AWS_REGION', DEFAULT_REGION)
         BEDROCK_CLIENT = boto3.client("bedrock-runtime", aws_region)
         logger.info(f"Initialized Bedrock client in region: {aws_region}")
-        
-        # Database connection string. Prefer standard libpq env names, but
-        # keep PGVECTOR_* fallback for older workshop copies.
-        db_user = os.getenv('PGUSER') or os.getenv('PGVECTOR_USER')
-        db_password = os.getenv('PGPASSWORD') or os.getenv('PGVECTOR_PASSWORD')
-        db_host = os.getenv('PGHOST') or os.getenv('PGVECTOR_HOST')
-        db_port = os.getenv('PGPORT') or os.getenv('PGVECTOR_PORT') or "5432"
-        db_name = os.getenv('PGDATABASE') or os.getenv('PGVECTOR_DATABASE')
-        connection = f"postgresql+psycopg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-        
+
+        # Database connection string (psycopg3)
+        connection = build_pg_connection_string()
+
         main()
     except Exception as e:
         logger.error(f"Application initialization error: {str(e)}")

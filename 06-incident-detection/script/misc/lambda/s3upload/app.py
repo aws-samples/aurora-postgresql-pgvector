@@ -60,7 +60,7 @@ def lambdaHandler(event, context):
     chunks = loader.load_and_split()
 
     # Generate embeddings using Amazon Bedrock
-    BEDROCK_CLIENT = boto3.client(service_name="bedrock-runtime", region_name='us-west-2', config=config) 
+    BEDROCK_CLIENT = boto3.client(service_name="bedrock-runtime", region_name=os.environ.get('AWS_REGION', 'us-west-2'), config=config)
     embeddings = BedrockEmbeddings(model_id='amazon.titan-embed-text-v2:0', client=BEDROCK_CLIENT)
 
     user, password, database, host, port = get_db_credentials(os.environ.get('DBSECRET'))

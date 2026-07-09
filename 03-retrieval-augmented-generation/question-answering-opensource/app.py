@@ -1,34 +1,16 @@
+import sys
+import os
+# rag_shared lives one directory up from this app
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from rag_shared import get_pdf_text, get_text_chunks
 import streamlit as st
 from dotenv import load_dotenv
-from PyPDF2 import PdfReader
 from langchain_community.embeddings import HuggingFaceInstructEmbeddings
 from langchain_community.llms import HuggingFaceHub
 from langchain_postgres.vectorstores import PGVector
 from langchain_classic.memory import ConversationBufferMemory
 from langchain_classic.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template, user_template
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-import os
-
-def get_pdf_text(pdf_docs):
-    text = ""
-    for pdf in pdf_docs:
-        pdf_reader = PdfReader(pdf)
-        for page in pdf_reader.pages:
-            text += page.extract_text()
-    return text
-
-
-def get_text_chunks(text):
-    text_splitter = RecursiveCharacterTextSplitter(
-        separators=["\n\n", "\n", ".", " "],
-        chunk_size=1000,
-        chunk_overlap=200,
-        length_function=len
-     )
-
-    chunks = text_splitter.split_text(text)
-    return chunks
 
 
 def get_vectorstore(text_chunks):
@@ -123,15 +105,7 @@ def main():
 
 
 if __name__ == '__main__':
+    from rag_shared import build_pg_connection_string
     load_dotenv()
-    
-    CONNECTION_STRING = PGVector.connection_string_from_db_params(
-        driver = os.environ.get("PGVECTOR_DRIVER", "psycopg"),
-        user = os.environ.get("PGVECTOR_USER"),
-        password = os.environ.get("PGVECTOR_PASSWORD"),
-        host = os.environ.get("PGVECTOR_HOST"),
-        port = os.environ.get("PGVECTOR_PORT"),
-        database = os.environ.get("PGVECTOR_DATABASE")
-)  
-
+    CONNECTION_STRING = build_pg_connection_string()
     main()

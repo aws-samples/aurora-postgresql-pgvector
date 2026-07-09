@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Python](https://img.shields.io/badge/Python-3.11.9-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Aurora PostgreSQL](https://img.shields.io/badge/Aurora-PostgreSQL-527FFF?style=for-the-badge&logo=amazonrds&logoColor=white)](https://aws.amazon.com/rds/aurora/)
 [![Amazon Bedrock](https://img.shields.io/badge/Amazon-Bedrock-FF9900?style=for-the-badge&logo=amazonwebservices&logoColor=white)](https://aws.amazon.com/bedrock/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2B-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
@@ -66,25 +66,30 @@ You will need:
 - An AWS account with permissions for the services used by the selected lab.
 - Amazon Bedrock model access for labs that generate embeddings or text.
 - Access to an Aurora PostgreSQL cluster with the `vector` extension enabled.
-- Python 3.11 and PostgreSQL client tools.
+- Python 3.11+ and PostgreSQL client tools.
 
 Most labs include their own `requirements.txt`, `.env` example, notebook, or Streamlit app. Start with the README in the lab directory you want to run.
 
 ## Core Patterns
 
-- **Vector search:** Store embeddings in Aurora PostgreSQL and query them with pgvector similarity operators and indexes.
+- **Vector search:** Store embeddings in Aurora PostgreSQL and query them with pgvector similarity operators and HNSW indexes.
 - **Hybrid retrieval:** Combine semantic search with structured metadata and application-specific filters.
 - **RAG:** Retrieve relevant context from the database before calling a foundation model.
 - **Aurora ML:** Invoke ML and Bedrock-backed functions from SQL when database-local inference is useful.
 - **Semantic caching:** Use embedding similarity to reuse prior responses when a new query is close enough.
 - **Agentic workflows:** Connect alerts, runbooks, and remediation actions into operational flows.
 
+## Model and Embedding Standards
+
+- **Embeddings:** Amazon Titan Text Embeddings V2 (`amazon.titan-embed-text-v2:0`, 1024 dimensions). Vector columns are `vector(1024)`.
+- **Generation:** Claude Sonnet 5 via Bedrock cross-region inference profiles (`global.anthropic.claude-sonnet-5`). Each lab reads the model ID from the `BEDROCK_MODEL_ID` environment variable (or the lab-specific equivalent) so you can override it at runtime. `global.anthropic.claude-sonnet-5` is also available as an override.
+
 ## Development Environment
 
 The hosted workshop environment is pre-configured with:
 
-- Python 3.11.9 with the required ML and application libraries.
-- PostgreSQL 16 client tools.
+- Python 3.11+ with the required ML and application libraries.
+- PostgreSQL 18 client tools.
 - AWS CLI and AWS SDKs.
 - Jupyter notebook and Streamlit support.
 

@@ -1,11 +1,14 @@
 import os
+import sys
 import traceback
 
 import boto3
 import streamlit as st
 from dotenv import load_dotenv
 
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import app as app_module
+from rag_shared import build_pg_connection_string
 
 
 def configure_runtime():
@@ -13,13 +16,7 @@ def configure_runtime():
 
     aws_region = os.getenv("AWS_REGION", app_module.DEFAULT_REGION)
     app_module.BEDROCK_CLIENT = boto3.client("bedrock-runtime", aws_region)
-
-    db_user = os.getenv("PGUSER") or os.getenv("PGVECTOR_USER")
-    db_password = os.getenv("PGPASSWORD") or os.getenv("PGVECTOR_PASSWORD")
-    db_host = os.getenv("PGHOST") or os.getenv("PGVECTOR_HOST")
-    db_port = os.getenv("PGPORT") or os.getenv("PGVECTOR_PORT") or "5432"
-    db_name = os.getenv("PGDATABASE") or os.getenv("PGVECTOR_DATABASE")
-    app_module.connection = f"postgresql+psycopg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    app_module.connection = build_pg_connection_string()
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import json
 import boto3
-import psycopg2
+import psycopg
 from concurrent.futures import ThreadPoolExecutor
 import os
 import time
@@ -9,7 +9,8 @@ import optparse
 import requests
 import datetime
 
-def get_db_credentials(secret_name, region_name='us-west-2'):
+def get_db_credentials(secret_name, region_name=None):
+    region_name = region_name or os.environ.get('AWS_REGION', 'us-west-2')
     """Retrieve database credentials from AWS Secrets Manager"""
     client = boto3.client('secretsmanager', region_name=region_name)
     secret_value = client.get_secret_value(SecretId=secret_name)
@@ -40,7 +41,7 @@ def conn_stress_test(cursor, duration_seconds):
 def run_stress_test_in_thread(secret_name, workload_type, region_name, duration_seconds):
     """Function to be run in multiple threads"""
     username, password, host, dbname = get_db_credentials(secret_name, region_name)
-    connection = psycopg2.connect(
+    connection = psycopg.connect(
         host=host,
         user=username,
         password=password,
@@ -64,13 +65,13 @@ def lambda_handler(event, context):
     workload_type = event['workload_type']
     duration_seconds = event.get('duration_seconds', 60)  # Default duration: 60 seconds
     num_threads = event.get('num_threads', os.cpu_count() * 8)  # Default threads: 2x CPUs
-    region_name = event.get('region_name', 'us-west-2')
+    region_name = event.get('region_name', os.environ.get('AWS_REGION', 'us-west-2'))
 
     username, password, host, dbname = get_db_credentials(secret_name, region_name)
     
     if workload_type == 'CPU':
         print(f"Running CPU workload simulation for {host} with time interval of {duration_seconds} seconds")
-        with psycopg2.connect( host=host, user=username, password=password, dbname=dbname) as connection:
+        with psycopg.connect( host=host, user=username, password=password, dbname=dbname) as connection:
             with connection.cursor() as cursor:
                 cursor.execute("drop table if exists cpustresstest;")
                 cursor.execute("create table if not exists cpustresstest(id bigint primary key, col2 text);")
@@ -104,7 +105,7 @@ def lambda_handler(event, context):
         retval = p.wait()        
         #print (retval)
     elif workload_type == 'CONN':
-        with psycopg2.connect( host=host, user=username, password=password, dbname=dbname) as connection:
+        with psycopg.connect( host=host, user=username, password=password, dbname=dbname) as connection:
             with connection.cursor() as cursor:
                 cursor.execute("select setting from pg_settings where name = 'max_connections'")
                 res = cursor.fetchone()
@@ -117,7 +118,7 @@ def lambda_handler(event, context):
             for future in futures:
                 future.result()  # Wait for all threads to complete
     elif workload_type == "OOM":
-       with psycopg2.connect( host=host, user=username, password=password, dbname=dbname) as connection:
+       with psycopg.connect( host=host, user=username, password=password, dbname=dbname) as connection:
            with connection.cursor() as cursor:
                cursor.execute("SELECT *,pg_sleep(1) FROM (SELECT *,repeat('x',99999) FROM generate_series(1,1000000) ORDER BY 1 OFFSET 1) a LIMIT 1")
     else:

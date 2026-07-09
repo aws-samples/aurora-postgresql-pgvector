@@ -1,6 +1,6 @@
 import streamlit as st
-import psycopg2
-import psycopg2.extras
+import psycopg
+import psycopg.rows
 import os
 from dotenv import load_dotenv
 
@@ -40,10 +40,11 @@ def main():
         st.info("Enter a search above to find movies using semantic similarity search.")
         return
 
-    with psycopg2.connect(
-        database=dbname, host=dbhost, port=dbport, user=dbuser, password=dbpass
+    with psycopg.connect(
+        dbname=dbname, host=dbhost, port=dbport, user=dbuser, password=dbpass,
+        row_factory=psycopg.rows.dict_row,
     ) as dbconn:
-        dbcur = dbconn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        dbcur = dbconn.cursor()
 
         # Fetch top 6 matches
         dbcur.execute("SELECT * FROM movie.get_top6_movies(%s);", (query,))
@@ -72,7 +73,7 @@ def main():
                 st.write(result[0].get('overview'))
 
             with st.expander("AI Review Summary", expanded=True):
-                with st.spinner("Generating review summary with Claude Sonnet 4.6..."):
+                with st.spinner("Generating review summary with Claude Sonnet 5..."):
                     dbcur.execute(
                         "SELECT movie.get_reviews_summary(%s)",
                         (result[0].get('id'),),

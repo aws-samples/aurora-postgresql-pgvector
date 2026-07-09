@@ -1,5 +1,8 @@
 import json
 import boto3
+# NOTE: This Lambda deploys with the pre-built psycopg2 layer
+# (script/misc/lambda/psycopg2_layer/psycopg2.zip), so it intentionally
+# uses psycopg2 rather than the psycopg (v3) standard used elsewhere.
 import psycopg2
 from concurrent.futures import ThreadPoolExecutor
 import os
@@ -8,7 +11,8 @@ import subprocess
 import optparse
 import requests
 
-def get_db_credentials(secret_name, region_name='us-west-2'):
+def get_db_credentials(secret_name, region_name=None):
+    region_name = region_name or os.environ.get('AWS_REGION', 'us-west-2')
     """Retrieve database credentials from AWS Secrets Manager"""
     client = boto3.client('secretsmanager', region_name=region_name)
     secret_value = client.get_secret_value(SecretId=secret_name)
@@ -63,7 +67,7 @@ def lambda_handler(event, context):
     workload_type = event['workload_type']
     duration_seconds = event.get('duration_seconds', 60)  # Default duration: 60 seconds
     num_threads = event.get('num_threads', os.cpu_count() * 8)  # Default threads: 2x CPUs
-    region_name = event.get('region_name', 'us-west-2')
+    region_name = event.get('region_name', os.environ.get('AWS_REGION', 'us-west-2'))
 
     username, password, host, dbname = get_db_credentials(secret_name, region_name)
     

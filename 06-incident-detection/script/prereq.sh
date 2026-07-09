@@ -220,7 +220,7 @@ function install_python3()
 
     # Installing required modules
     
-    pip${PYTHON_MAJOR_VERSION} install boto3 psycopg2-binary requests  > ${TERM} 2>&1
+    pip${PYTHON_MAJOR_VERSION} install boto3 "psycopg[binary]" requests  > ${TERM} 2>&1
 
     echo "Making this version of python as default"
     sudo rm /usr/bin/python3

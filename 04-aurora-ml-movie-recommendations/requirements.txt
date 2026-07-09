@@ -1,6 +1,7 @@
 streamlit>=1.54.0
 python-dotenv>=1.2.2
-psycopg2-binary>=2.9.10
-pgvector>=0.3.6,<0.4
+psycopg[binary]>=3.3.4
+pgvector>=0.4
+numpy>=2.1.0,<3
 urllib3>=2.7.0,<3
 boto3>=1.43.40

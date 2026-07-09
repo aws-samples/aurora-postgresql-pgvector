@@ -55,7 +55,7 @@ def main():
                 CREATE TABLE IF NOT EXISTS travel_knowledge_base (
                     id integer PRIMARY KEY,
                     content text NOT NULL,
-                    embedding vector(1536) NOT NULL,
+                    embedding vector(1024) NOT NULL,
                     category text
                 );
                 """
@@ -73,6 +73,12 @@ def main():
                     category = EXCLUDED.category;
                 """,
                 list(load_rows(csv_path)),
+            )
+            cur.execute(
+                """
+                CREATE INDEX IF NOT EXISTS travel_kb_embedding_hnsw_idx
+                ON travel_knowledge_base USING hnsw (embedding vector_cosine_ops);
+                """
             )
         conn.commit()
 

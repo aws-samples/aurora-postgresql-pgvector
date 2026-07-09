@@ -33,9 +33,28 @@ Our system processes and recommends movies through these key steps:
 ## 🚀 Setup Guide
 
 ### Prerequisites
-- AWS account with Bedrock access
-- Aurora PostgreSQL cluster
-- Completed [Aurora ML setup](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/postgresql-ml.html#postgresql-ml-setting-up-apg-br)
+
+**Amazon Bedrock model access** — enable the following models in the Bedrock console (us-west-2 or your target region):
+- **Amazon Titan Embeddings V2** (`amazon.titan-embed-text-v2:0`) — used for all vector embeddings
+- **Anthropic Claude Sonnet 5** (`global.anthropic.claude-sonnet-5`) — used for review summaries; `global.anthropic.claude-sonnet-5` is also available as an override
+
+**Aurora ML — IAM role for Bedrock** — your Aurora cluster must have an IAM role with `bedrock:InvokeModel` attached via the Bedrock feature:
+
+```bash
+# 1. Create or reuse a role with the AmazonBedrockFullAccess policy (or a least-privilege inline policy)
+# 2. Attach it to the cluster
+aws rds add-role-to-db-cluster \
+  --db-cluster-identifier <your-cluster-id> \
+  --role-arn arn:aws:iam::<account-id>:role/<your-bedrock-role> \
+  --feature-name Bedrock \
+  --region ${AWS_REGION:-us-west-2}
+```
+
+See the [Aurora ML setup guide](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/postgresql-ml.html#postgresql-ml-setting-up-apg-br) for full details.
+
+**Other requirements:**
+- Aurora PostgreSQL cluster (Aurora PostgreSQL 18.3 recommended)
+- Python 3.11+
 
 ### Installation Steps
 
@@ -78,8 +97,17 @@ psql -d moviedb -f data/functions.sql
 
 3. Add the embedding column and generate embeddings:
 ```sql
-ALTER TABLE movie.movies ADD COLUMN movie_embedding vector(1536);
+ALTER TABLE movie.movies ADD COLUMN movie_embedding vector(1024);
 CALL movie.generate_movie_embeddings();
+```
+
+   > **Note:** If you previously ran this lab with Titan Embeddings V1 (1536-dim), you must drop the old column, recreate it as `vector(1024)`, and re-run `generate_movie_embeddings()` to regenerate all embeddings with Titan V2.
+
+4. Create the HNSW index for fast cosine-distance search (run after embeddings are generated):
+```sql
+CREATE INDEX IF NOT EXISTS movies_embedding_hnsw_idx
+    ON movie.movies
+    USING hnsw (movie_embedding vector_cosine_ops);
 ```
 
 ## 💻 Running the Application
@@ -95,7 +123,7 @@ streamlit run ./app.py --server.port 8080
 
 ## 🔍 Understanding Vector Embeddings
 
-Our system creates 1536-dimensional vectors that capture movie characteristics including:
+Our system creates 1024-dimensional vectors that capture movie characteristics including:
 - Plot elements and themes
 - Genre combinations
 - Cast relationships

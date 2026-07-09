@@ -6,28 +6,28 @@ CREATE OR REPLACE FUNCTION movie.get_top6_movies(search_query text) RETURNS TABL
                 overview text
         ) LANGUAGE plpgsql AS $$
 DECLARE r record;
-v vector(1536);
+v vector(1024);
 rcnt integer;
 BEGIN
 EXECUTE $x$
 SELECT aws_bedrock.invoke_model_get_embeddings(
-                model_id := 'amazon.titan-embed-text-v1',
+                model_id := 'amazon.titan-embed-text-v2:0',
                 content_type := 'application/json',
                 json_key := 'embedding',
                 model_input := $1::text
-        ) $x$ INTO v USING jsonb_build_object('inputText', search_query)::text;
+        ) $x$ INTO v USING jsonb_build_object('inputText', search_query, 'dimensions', 1024, 'normalize', true)::text;
 RETURN QUERY
 SELECT m.id,
         m.title,
         m.poster,
         m.overview
 FROM movie.movies m
-ORDER BY m.movie_embedding <->v
+ORDER BY m.movie_embedding <=>v
 LIMIT 6;
 END $$;
 CREATE OR REPLACE PROCEDURE movie.generate_movie_embeddings(pmovieid bigint default NULL) LANGUAGE plpgsql AS $$
 DECLARE r record;
-v vector(1536);
+v vector(1024);
 v1 text;
 rcnt integer := 0;
 BEGIN FOR r IN
@@ -61,11 +61,11 @@ v1 := regexp_replace(
 );
 EXECUTE $x$
 SELECT aws_bedrock.invoke_model_get_embeddings(
-                model_id := 'amazon.titan-embed-text-v1',
+                model_id := 'amazon.titan-embed-text-v2:0',
                 content_type := 'application/json',
                 json_key := 'embedding',
                 model_input := $1::text
-        ) $x$ INTO v USING jsonb_build_object('inputText', v1)::text;
+        ) $x$ INTO v USING jsonb_build_object('inputText', v1, 'dimensions', 1024, 'normalize', true)::text;
 UPDATE movie.movies
 set movie_embedding = v
 WHERE id = r.id;
@@ -118,7 +118,7 @@ v_payload := jsonb_build_object(
 )::text;
 EXECUTE $q$
 SELECT aws_bedrock.invoke_model(
-                model_id := 'global.anthropic.claude-sonnet-4-6',
+                model_id := 'global.anthropic.claude-sonnet-5',
                 content_type := 'application/json',
                 accept_type := 'application/json',
                 model_input := $1
@@ -127,3 +127,10 @@ ELSE v_summary := '{"content": [{"text": "No reviews are available for this movi
 END IF;
 RETURN v_summary;
 END $$ LANGUAGE plpgsql;
+
+-- HNSW index for fast cosine-distance (<=>) nearest-neighbour search.
+-- Run AFTER generating embeddings with movie.generate_movie_embeddings().
+-- If you change the embedding model, drop and recreate this index.
+CREATE INDEX IF NOT EXISTS movies_embedding_hnsw_idx
+        ON movie.movies
+        USING hnsw (movie_embedding vector_cosine_ops);

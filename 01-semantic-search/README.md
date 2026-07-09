@@ -17,10 +17,9 @@ The notebook generates 768-dimensional embeddings and stores them in pgvector fo
 Create a Python environment and install both requirement files:
 
 ```bash
-python3.11 -m venv env
+python3 -m venv env
 source env/bin/activate
-pip install -r requirements1.txt
-pip install -r requirements2.txt
+pip install -r requirements1.txt -r requirements2.txt
 ```
 
 Create `.env` from `env.example` and fill in your Aurora PostgreSQL connection values:
@@ -40,6 +39,10 @@ Open and run:
 ```text
 pgvector_langchain_auroraml.ipynb
 ```
+
+## AWS Model Access
+
+This lab uses only Hugging Face `sentence-transformers/all-mpnet-base-v2` for embeddings, downloaded locally via the `sentence-transformers` package. No Amazon Bedrock model access is required.
 
 ## Troubleshooting
 

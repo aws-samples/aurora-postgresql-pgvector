@@ -40,9 +40,9 @@ Parameters:
 
   DBEngineVersion:
     Type: String
-    Default: 16.3
+    Default: 18.3
     AllowedValues:
-      - 16.3
+      - 18.3
 
   DBInstanceSize:
     Type: String
@@ -389,7 +389,7 @@ Resources:
     Type: AWS::RDS::DBClusterParameterGroup
     Properties:
       Description: "Aurora PostgreSQL Custom Cluster parameter group"
-      Family: aurora-postgresql16
+      Family: aurora-postgresql18
       Parameters:
         shared_preload_libraries: "pg_stat_statements"
       Tags:
@@ -401,7 +401,7 @@ Resources:
     Type: AWS::RDS::DBParameterGroup
     Properties:
       Description: !Sub ${AWS::StackName}-dbparamgroup
-      Family: aurora-postgresql16
+      Family: aurora-postgresql18
       Parameters:
         log_rotation_age: "1440"
         log_rotation_size: "102400"
@@ -495,7 +495,7 @@ Resources:
       DBSubnetGroupName: !Ref DBSubnetGroup
       AutoMinorVersionUpgrade: true
       EnableHttpEndpoint: true
-      EngineVersion: "16.3"
+      EngineVersion: "18.3"
       KmsKeyId: !Ref EncryptionKey
       StorageEncrypted: true
       StorageType: aurora-iopt1
@@ -1907,7 +1907,7 @@ Resources:
       Instruction: "Assume the role of a helpful shopping agent with in-depth knowledge of our product lineup and real-time inventory data. As an AI-powered inventory specialist, your task is to accurately report on product quantities, alert customers to low stock items, and suggest similar products when necessary. Act as a friendly and efficient shopping guide with comprehensive knowledge of our product range and stock levels. Assist customers in finding the perfect item by asking clarifying questions and offering tailored recommendations based on their preferences and our current inventory. Always prioritize accuracy and customer satisfaction in your responses."
       AutoPrepare: true
       Description: Bedrock Agent for DAT301
-      FoundationModel: anthropic.claude-3-5-sonnet-20240620-v1:0
+      FoundationModel: !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/global.anthropic.claude-sonnet-5
       KnowledgeBases:
         - Description: "Knowledgebase for DAT301"
           KnowledgeBaseId: !GetAtt AmazonBedrockAgentKnowledgebase.KnowledgeBaseId

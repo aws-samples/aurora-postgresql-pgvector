@@ -15,7 +15,7 @@ from redis.exceptions import RedisError
 from datetime import datetime
 
 # AWS configuration
-aws_region = os.getenv('AWS_REGION', 'us-east-1')
+aws_region = os.getenv('AWS_REGION', 'us-west-2')
 bedrock = boto3.client('bedrock-runtime', region_name=aws_region)
 
 # ElastiCache configuration
@@ -28,7 +28,7 @@ DB_NAME = os.getenv('DB_NAME')
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 DB_PORT = int(os.getenv('DB_PORT', '5432'))
-EMBEDDING_MODEL_ID = os.getenv('BEDROCK_EMBEDDING_MODEL_ID', 'amazon.titan-embed-text-v1')
+EMBEDDING_MODEL_ID = os.getenv('BEDROCK_EMBEDDING_MODEL_ID', 'amazon.titan-embed-text-v2:0')
 
 # Initialize connections
 def init_connections():
@@ -86,7 +86,7 @@ def get_embedding(text):
     try:
         response = bedrock.invoke_model(
             modelId=EMBEDDING_MODEL_ID,
-            body=json.dumps({"inputText": text})
+            body=json.dumps({"inputText": text, "dimensions": 1024, "normalize": True})
         )
         response_body = json.loads(response.get('body').read())
         return response_body.get('embedding')
@@ -392,7 +392,7 @@ def generate_response_with_context(messages, user_prefs, chat_history=[]):
         }]
 
         return bedrock.invoke_model_with_response_stream(
-            modelId="anthropic.claude-3-haiku-20240307-v1:0",
+            modelId=os.environ.get('BEDROCK_MODEL_ID', 'us.anthropic.claude-haiku-4-5-20251001-v1:0'),
             body=json.dumps({
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": 1000,

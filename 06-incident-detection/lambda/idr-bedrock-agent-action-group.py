@@ -3,6 +3,9 @@ import os
 import boto3
 import logging
 import traceback
+# NOTE: This Lambda deploys with the pre-built psycopg2 layer
+# (script/misc/lambda/psycopg2_layer/psycopg2.zip), so it intentionally
+# uses psycopg2 rather than the psycopg (v3) standard used elsewhere.
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from botocore.client import Config

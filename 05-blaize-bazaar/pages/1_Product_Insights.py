@@ -24,24 +24,27 @@ warnings.filterwarnings("ignore", message="pandas only supports SQLAlchemy conne
 # Load environment variables
 load_dotenv()
 
+# Region from environment (never hardcoded)
+AWS_REGION = os.environ.get('AWS_REGION', 'us-west-2')
+
 # Initialize Bedrock client
 config = Config(
-    region_name='us-west-2',
+    region_name=AWS_REGION,
     retries={
         'max_attempts': 3,
         'mode': 'standard'
     }
 )
-   
+
 bedrock = boto3.client(
     service_name='bedrock-runtime',
-    region_name='us-west-2',
+    region_name=AWS_REGION,
     config=config
 )
 
 # Constants and configurations
 LOGO_URL = "static/Blaize.png"
-CLAUDE_MODEL_ID = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+CLAUDE_MODEL_ID = os.environ.get('BEDROCK_CLAUDE_MODEL_ID', 'global.anthropic.claude-sonnet-5')
 
 # Database functions
 def get_db_connection():

@@ -1,62 +1,29 @@
-# 🤖 Enterprise RAG Question-Answering System
+# Enterprise RAG Question-Answering System (Amazon Bedrock)
 
-Build an enterprise-ready Retrieval Augmented Generation (RAG) application leveraging Amazon Web Services and open-source technologies. This implementation creates an intelligent question-answering system that combines the power of vector databases with state-of-the-art language models.
+Build a Retrieval Augmented Generation (RAG) application powered by Amazon Bedrock and Aurora PostgreSQL with pgvector.
 
-## 🎯 Overview
+## Overview
 
-This solution demonstrates the implementation of a production-ready RAG system using:
+- Amazon Bedrock for foundation model access (Claude Sonnet 5, Amazon Nova Micro/Lite/Pro)
+- Aurora PostgreSQL with pgvector for vector storage
+- Amazon Titan Text Embeddings V2 (`amazon.titan-embed-text-v2:0`) for generating embeddings
+- LangChain for the retrieval pipeline
+- Streamlit for the user interface
 
-- 🚀 Amazon Bedrock for accessing foundation models
-- 📊 pgvector extension on Amazon Aurora PostgreSQL for vector operations
-- 🧠 Anthropic's Claude for advanced language understanding
-- 💫 Titan Text for generating high-quality text embeddings
-- 🔗 LangChain for orchestrating AI components
-- 🖥️ Streamlit for creating an intuitive user interface
-
-## 🏗️ Architecture
+## Architecture
 
 ![Architecture](static/RAG_APG.png)
 
-## ⚙️ System Workflow
-
-Our RAG implementation follows a sophisticated pipeline to deliver accurate answers:
-
-1. **Document Ingestion** 📄
-   - Processes PDF documents through advanced text extraction
-   - Maintains document structure and metadata
-
-2. **Semantic Processing** 🔄
-   - Implements intelligent text chunking algorithms
-   - Preserves context across document segments
-
-3. **Vector Embedding** 🎯
-   - Utilizes Amazon Bedrock's Titan Text for generating embeddings
-   - Creates high-dimensional vector representations of content
-
-4. **Query Processing** 💭
-   - Accepts natural language questions
-   - Converts queries into compatible vector representations
-
-5. **Context Retrieval** 🔍
-   - Performs semantic similarity matching
-   - Identifies relevant document segments
-
-6. **Answer Generation** ✨
-   - Leverages Anthropic's Claude for response synthesis
-   - Ensures responses are grounded in source documents
-
-## 🚀 Getting Started
-
-### Prerequisites
+## Prerequisites
 
 - Python 3.9 or higher
-- AWS account with Bedrock access
-- Amazon Aurora PostgreSQL cluster
-- Git
+- An AWS account with **Amazon Bedrock model access** enabled for the models you want to use. See [Request access to an Amazon Bedrock foundation model](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html).
+- An Amazon Aurora PostgreSQL cluster with the `vector` extension installed
+- AWS credentials configured (IAM role, `aws configure`, or environment variables)
 
-### Installation
+## Installation
 
-1. Clone the repository:
+1. Clone the repository and navigate to this directory:
    ```bash
    git clone https://github.com/aws-samples/aurora-postgresql-pgvector.git
    cd aurora-postgresql-pgvector/03-retrieval-augmented-generation/question-answering-bedrock
@@ -68,63 +35,65 @@ Our RAG implementation follows a sophisticated pipeline to deliver accurate answ
    source env/bin/activate
    ```
 
-3. Configure environment variables:
-   ```bash
-   # Create .env file with the following structure
-   PGUSER='<username>'
-   PGPASSWORD='<password>'
-   PGHOST='<aurora-cluster-endpoint>'
-   PGPORT=5432
-   PGDATABASE='<database-name>'
-   AWS_REGION='<aws-region>'
-   ```
-
-4. Install dependencies:
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-### Database Setup
-
-1. Connect to your Aurora PostgreSQL cluster
-2. Enable the pgvector extension:
-   ```sql
-   CREATE EXTENSION vector;
-   ```
-
-## 💻 Usage
-
-1. Launch the application:
+4. Configure environment variables:
    ```bash
-   streamlit run app.py
+   cp env.example .env
+   # Edit .env and fill in your values
    ```
 
-2. Navigate to the web interface in your browser
-3. Upload PDF documents through the provided interface
-4. Start asking questions about your documents
+   Key variables:
+   ```
+   PGUSER=<username>
+   PGPASSWORD=<password>
+   PGHOST=<aurora-cluster-endpoint>
+   PGPORT=5432
+   PGDATABASE=<database-name>
+   AWS_REGION=us-west-2          # or your preferred region
+   BEDROCK_MODEL_ID=global.anthropic.claude-sonnet-5   # optional override
+   ```
 
-## 🔒 Security Considerations
+   `global.anthropic.claude-sonnet-5` is also available as a `BEDROCK_MODEL_ID` override.
 
-- Implement appropriate IAM roles and permissions
-- Secure database connections using SSL/TLS
-- Follow AWS security best practices for Bedrock access
-- Properly handle sensitive information in environment variables
+## Database Setup
 
-## 📈 Performance Optimization
+Connect to your Aurora PostgreSQL cluster and enable the pgvector extension:
 
-- Utilize connection pooling for database operations
-- Implement caching strategies where appropriate
-- Configure proper chunk sizes for optimal retrieval
-- Monitor and adjust embedding dimensions based on requirements
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+```
 
-## 🤝 Contributing
+## Running the Application
 
-This project is maintained for educational purposes and demonstrates AWS best practices. While we don't accept direct contributions, we encourage:
+Preferred entry point (bootstraps runtime and then calls `app.main()`):
+```bash
+streamlit run rag_app.py
+```
 
-- Creating issues for bugs or suggested improvements
-- Forking the repository for personal customization
-- Sharing your experiences and optimizations
+Alternative (runs the same app via `__main__` block):
+```bash
+streamlit run app.py
+```
 
-## 📝 License
+Then navigate to the web interface, upload PDF documents, and start asking questions.
 
-This project is licensed under the [MIT-0 License](https://spdx.org/licenses/MIT-0.html) - see the LICENSE file for details.
+## Model Selection
+
+The sidebar lets you choose between:
+
+| Display name | Model ID |
+|---|---|
+| Claude Sonnet 5 | `global.anthropic.claude-sonnet-5` (or `BEDROCK_MODEL_ID`) |
+| Amazon Nova Micro | `us.amazon.nova-micro-v1:0` |
+| Amazon Nova Lite | `us.amazon.nova-lite-v1:0` |
+| Amazon Nova Pro | `us.amazon.nova-pro-v1:0` |
+
+All Nova cross-region `us.*` profiles work in us-west-2 and other supported regions.
+
+## License
+
+[MIT-0 License](https://spdx.org/licenses/MIT-0.html)

@@ -120,8 +120,7 @@ AWS_REGION=${AWS_REGION}
 
 # Bedrock configuration
 # Note: Don't change these values
-BEDROCK_CLAUDE_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
-BEDROCK_CLAUDE_MODEL_ARN=arn:aws:bedrock:${AWS_REGION}::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0
+BEDROCK_CLAUDE_MODEL_ID=global.anthropic.claude-sonnet-5
 
 # Lambda configuration
 # Note: Don't change this value
@@ -178,14 +177,14 @@ function setup_venv()
     fi
     
     # Install additional critical packages
-    echo "Installing additional packages (boto3, psycopg2-binary, langchain)..."
-    python -m pip install boto3 psycopg2-binary langchain langchain-aws langchain-community > ${TERM} 2>&1
+    echo "Installing additional packages (boto3, psycopg, langchain)..."
+    python -m pip install boto3 "psycopg[binary]" langchain langchain-aws langchain-community > ${TERM} 2>&1
     
     # Verify critical imports
     echo "Verifying package installations..."
     python -c "import boto3; print('✅ boto3 installed')" || echo "❌ boto3 not available"
     python -c "import streamlit; print('✅ streamlit installed')" || echo "❌ streamlit not available"
-    python -c "import psycopg2; print('✅ psycopg2 installed')" || echo "❌ psycopg2 not available"
+    python -c "import psycopg; print('✅ psycopg installed')" || echo "❌ psycopg not available"
     python -c "import langchain; print('✅ langchain installed')" || echo "❌ langchain not available"
     
     deactivate
@@ -236,15 +235,16 @@ function install_packages()
 function install_postgresql()
 {
     print_line
-    echo "Installing PostgreSQL 16 client"
+    echo "Installing PostgreSQL client"
     print_line
 
-    # Install PostgreSQL 16 for Amazon Linux 2023
-    sudo yum install -y postgresql16 postgresql16-devel > ${TERM} 2>&1
+    # Install the newest PostgreSQL client available on Amazon Linux 2023
+    # (AL2023 repos lag the newest major; any modern client works against Aurora PostgreSQL 18.3)
+    sudo yum install -y postgresql17 postgresql17-devel > ${TERM} 2>&1 || sudo yum install -y postgresql16 postgresql16-devel > ${TERM} 2>&1
 
     # Verify installation
     if command -v psql > /dev/null; then
-        echo "PostgreSQL 16 client installed successfully"
+        echo "PostgreSQL client installed successfully"
         psql --version
     else
         echo "PostgreSQL installation failed"
@@ -343,7 +343,7 @@ function configure_pg()
     # Set environment variables for the current session
     export PGDATABASE=postgres
     export PGPORT=5432
-    export PGVECTOR_DRIVER='psycopg2'
+    export PGVECTOR_DRIVER='psycopg'
     export PGVECTOR_USER=$PGUSER
     export PGVECTOR_PASSWORD=$PGPASSWORD
     export PGVECTOR_HOST=$PGHOST
@@ -366,7 +366,7 @@ function configure_pg()
     echo "export PGDATABASE='postgres'" >> $PROFILE_FILE
     echo "export PGPORT=5432" >> $PROFILE_FILE
     echo "export DB_NAME=postgres" >> $PROFILE_FILE
-    echo "export PGVECTOR_DRIVER='psycopg2'" >> $PROFILE_FILE
+    echo "export PGVECTOR_DRIVER='psycopg'" >> $PROFILE_FILE
     echo "export PGVECTOR_USER='$PGUSER'" >> $PROFILE_FILE
     echo "export PGVECTOR_PASSWORD='$PGPASSWORD'" >> $PROFILE_FILE
     echo "export PGVECTOR_HOST='$PGHOST'" >> $PROFILE_FILE
@@ -460,7 +460,7 @@ function install_python3()
     /usr/local/bin/python${PYTHON_MAJOR_VERSION} -m pip install --upgrade pip > ${TERM} 2>&1
 
     echo "Installing essential Python packages globally..."
-    /usr/local/bin/python${PYTHON_MAJOR_VERSION} -m pip install psycopg2-binary boto3 > ${TERM} 2>&1
+    /usr/local/bin/python${PYTHON_MAJOR_VERSION} -m pip install "psycopg[binary]" boto3 > ${TERM} 2>&1
 
     # Verify installation
     /usr/local/bin/python${PYTHON_MAJOR_VERSION} --version
@@ -584,14 +584,14 @@ echo "============================================================"
 
 # Test database connection
 if command -v psql &> /dev/null && [ -n "$PGHOST" ]; then
-    if python3 -c "import psycopg2" &> /dev/null; then
+    if python3 -c "import psycopg" &> /dev/null; then
         if PGPASSWORD=$PGPASSWORD psql -h $PGHOST -U $PGUSER -d postgres -c "SELECT 1" >/dev/null 2>&1; then
             echo "✅ Connected to Aurora PostgreSQL successfully!"
         else
             echo "⚠️  Database credentials configured but connection failed"
         fi
     else
-        echo "⚠️  psycopg2 not installed globally (available in virtual environments)"
+        echo "⚠️  psycopg not installed globally (available in virtual environments)"
     fi
 else
     echo "⚠️  Database connection not configured"
@@ -632,11 +632,11 @@ import sys
 
 def test_connection():
     try:
-        import psycopg2
-        print("✅ psycopg2 module loaded successfully")
+        import psycopg
+        print("✅ psycopg module loaded successfully")
     except ImportError:
-        print("❌ Error: psycopg2 not installed")
-        print("   Install with: pip install psycopg2-binary")
+        print("❌ Error: psycopg not installed")
+        print("   Install with: pip install 'psycopg[binary]'")
         return False
     
     # Get connection parameters from environment
@@ -652,11 +652,11 @@ def test_connection():
     
     try:
         print(f"🔌 Connecting to {host}...")
-        conn = psycopg2.connect(
+        conn = psycopg.connect(
             host=host,
             user=user,
             password=password,
-            database=database,
+            dbname=database,
             port=5432
         )
         print("✅ Connected to database successfully!")
@@ -813,7 +813,7 @@ streamlit run Home.py --server.port 8501
 ### Python Environment
 - **Global Python**: 3.11.9 at `/usr/local/bin/python3.11`
 - **Virtual Environment**: `/workshop/aurora-postgresql-pgvector/05-blaize-bazaar/venv-blaize-bazaar`
-- **Packages**: boto3, psycopg2, streamlit, langchain, and more
+- **Packages**: boto3, psycopg, streamlit, langchain, and more
 
 ### Environment Variables
 All necessary environment variables are set in `~/.bashrc`:

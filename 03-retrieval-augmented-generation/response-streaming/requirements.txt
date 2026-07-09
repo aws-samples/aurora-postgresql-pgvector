@@ -6,10 +6,14 @@ langchain-community>=0.4.2
 langchain-aws>=1.6.1
 langchain-core>=1.4.8
 langchain-text-splitters>=1.1.2
-PyPDF2>=3.0.1
+pypdf>=6.0.0
 python-dotenv>=1.2.2
 altair>=5.4.1
 urllib3>=2.7.0,<3
 boto3>=1.43.40
 anthropic>=0.64.0
 Pillow>=12.2.0
+psycopg[binary]>=3.3.4
+# langchain-postgres 0.0.17 declares pgvector<0.4; keep cap until that dep is lifted
+pgvector>=0.3.6,<0.4
+numpy>=2.1.0,<3

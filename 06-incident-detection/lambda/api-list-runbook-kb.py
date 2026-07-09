@@ -7,13 +7,20 @@ from botocore.client import Config
 import os
 from datetime import datetime
 
-# Define FM to be used for generations 
+# Define FM to be used for generations
 kb_id = os.getenv('KBID')
-region_name = os.getenv('AWS_DEFAULT_REGION')
+region_name = os.environ.get('AWS_REGION', os.getenv('AWS_DEFAULT_REGION', 'us-west-2'))
 sts_client = boto3.client('sts')
 boto3_session = boto3.session.Session()
-model_id = "anthropic.claude-3-haiku-20240307-v1:0" # we will be using Anthropic Claude 3 Haiku throughout the notebook
-model_arn = f'arn:aws:bedrock:{region_name}::foundation-model/{model_id}'
+# Cross-region inference profile; override via BEDROCK_MODEL_ID env var
+# global.anthropic.claude-sonnet-5 is also available as an override
+model_id = os.environ.get('BEDROCK_MODEL_ID', 'us.anthropic.claude-haiku-4-5-20251001-v1:0')
+# Cross-region inference profiles (us./eu./ap./global. prefix) use inference-profile ARN type
+model_arn = (
+    f'arn:aws:bedrock:{region_name}::inference-profile/{model_id}'
+    if model_id.startswith(('us.', 'eu.', 'ap.', 'global.'))
+    else f'arn:aws:bedrock:{region_name}::foundation-model/{model_id}'
+)
 
 bedrock_config = Config(connect_timeout=120, read_timeout=120, retries={'max_attempts': 0}, region_name=region_name)
 bedrock_agent_client = boto3_session.client("bedrock-agent-runtime", config=bedrock_config)

@@ -1,5 +1,9 @@
 # Import libraries
-from PyPDF2 import PdfReader
+import sys
+import os
+# rag_shared lives one directory up from this app
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from rag_shared import get_pdf_text, get_text_chunks, build_pg_connection_string
 from langchain_aws import BedrockEmbeddings
 from langchain_aws import ChatBedrock
 from langchain_core.messages import (
@@ -11,37 +15,12 @@ from langchain_core.prompts import SystemMessagePromptTemplate
 from langchain_core.prompts import HumanMessagePromptTemplate
 from langchain_postgres.vectorstores import PGVector
 from langchain_classic.chains import ConversationalRetrievalChain
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import ChatMessage
 import streamlit as st
 from dotenv import load_dotenv
 from PIL import Image
-import os
 import boto3
-
-# This function takes a list of PDF documents as input and extracts the text from them using PdfReader. 
-# It concatenates the extracted text and returns it.
-def get_pdf_text(pdf_docs):
-    text = ""
-    for pdf in pdf_docs:
-        pdf_reader = PdfReader(pdf)
-        for page in pdf_reader.pages:
-            text += page.extract_text()
-    return text
-
-# Given the extracted text, this function splits it into smaller chunks using the RecursiveCharacterTextSplitter module. 
-# The chunk size, overlap, and other parameters are configured to optimize processing efficiency.
-def get_text_chunks(text):
-    text_splitter = RecursiveCharacterTextSplitter(
-        separators=["\n\n", "\n", ".", " "],
-        chunk_size=1000,
-        chunk_overlap=200,
-        length_function=len
-     )
-
-    chunks = text_splitter.split_text(text)
-    return chunks
 
 # Create a custom handler and pass a streamlit container to it. This is required for response streaming.
 class StreamHandler(BaseCallbackHandler):
@@ -114,7 +93,7 @@ def main():
         with st.chat_message("Assistant"):
             stream_handler = StreamHandler(st.empty())
 
-            llm = ChatBedrock(model_id="anthropic.claude-3-haiku-20240307-v1:0", streaming=True, callbacks=[stream_handler], client=BEDROCK_CLIENT)
+            llm = ChatBedrock(model_id=os.environ.get("BEDROCK_MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0"), streaming=True, callbacks=[stream_handler], client=BEDROCK_CLIENT)
             llm.model_kwargs = {"temperature": 0.5, "max_tokens": 8191}
 
             general_system_template = """ 
@@ -190,19 +169,15 @@ def main():
 if __name__ == '__main__':
     # This function loads the environment variables from a .env file.
     load_dotenv()
-    
-    # Define the Bedrock client
-    BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-west-2')
-    
+
+    # Define the Bedrock client (region from env; defaults to us-west-2)
+    aws_region = os.environ.get('AWS_REGION', 'us-west-2')
+    BEDROCK_CLIENT = boto3.client("bedrock-runtime", aws_region)
+
     # Define the Embedding model using the Bedrock client
-    embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-text-v2:0", client=BEDROCK_CLIENT)
-    
-    # Create the connection string for pgvector. Ref: https://github.com/langchain-ai/langchain-postgres/blob/main/examples/vectorstore.ipynb
-    db_user = os.getenv('PGUSER') or os.getenv('PGVECTOR_USER')
-    db_password = os.getenv('PGPASSWORD') or os.getenv('PGVECTOR_PASSWORD')
-    db_host = os.getenv('PGHOST') or os.getenv('PGVECTOR_HOST')
-    db_port = os.getenv('PGPORT') or os.getenv('PGVECTOR_PORT') or "5432"
-    db_name = os.getenv('PGDATABASE') or os.getenv('PGVECTOR_DATABASE')
-    connection = f"postgresql+psycopg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    embeddings = BedrockEmbeddings(model_id="amazon.titan-embed-text-v2:0", client=BEDROCK_CLIENT)
+
+    # Create the connection string for pgvector (psycopg3)
+    connection = build_pg_connection_string()
 
     main()

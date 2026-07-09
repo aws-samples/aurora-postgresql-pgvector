@@ -29,7 +29,7 @@ bedrockRuntime = session.client('bedrock-runtime', config=config)
 knowledgeBaseId = os.environ.get('BEDROCK_KB_ID')
 
 # Define Claude model ID
-CLAUDE_MODEL_ID = os.environ.get('BEDROCK_CLAUDE_MODEL_ID')
+CLAUDE_MODEL_ID = os.environ.get('BEDROCK_CLAUDE_MODEL_ID', 'global.anthropic.claude-sonnet-5')
 
 logo_url = "static/Blaize.png"
 st.sidebar.image(logo_url, width="stretch")

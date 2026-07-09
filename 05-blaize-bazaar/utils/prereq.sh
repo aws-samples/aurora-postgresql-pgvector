@@ -54,8 +54,7 @@ AWS_REGION=${AWS_REGION}
 
 # Bedrock configuration
 # Note: Don't change these values
-BEDROCK_CLAUDE_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
-BEDROCK_CLAUDE_MODEL_ARN=arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0
+BEDROCK_CLAUDE_MODEL_ID=global.anthropic.claude-sonnet-5
 
 # Lambda configuration
 # Note: Don't change this value
@@ -264,7 +263,7 @@ function install_postgresql()
     sudo yum update -y > ${TERM} 2>&1
 
     # Enable PostgreSQL14 as part of amazon-extras library
-    sudo amazon-linux-extras enable postgresql14
+    sudo amazon-linux-extras enable postgresql14  # AL2 max; cluster itself runs Aurora PostgreSQL 18.3
     sudo yum install -y postgresql-server > ${TERM} 2>&1
 
     # Verify installation

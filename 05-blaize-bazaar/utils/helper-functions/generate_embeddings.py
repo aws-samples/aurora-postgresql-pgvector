@@ -5,17 +5,21 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 
-# Initialize Bedrock client
-bedrock = boto3.client('bedrock-runtime')
+# Initialize Bedrock client (region from environment)
+import os
+bedrock = boto3.client('bedrock-runtime', region_name=os.environ.get('AWS_REGION', 'us-west-2'))
+
+# Embedding model — amazon.titan-embed-text-v2:0 produces 1024-dim vectors
+EMBED_MODEL_ID = "amazon.titan-embed-text-v2:0"
 
 # Function to get embedding for a single text
 def get_embedding(text):
     try:
         response = bedrock.invoke_model(
-            modelId="amazon.titan-embed-text-v2:0",
+            modelId=EMBED_MODEL_ID,
             contentType="application/json",
             accept="application/json",
-            body=json.dumps({"inputText": text})
+            body=json.dumps({"inputText": text, "dimensions": 1024})
         )
         # Read the StreamingBody object
         response_body = json.loads(response['body'].read())
@@ -33,8 +37,8 @@ def generate_embeddings_parallel(df, max_workers=50):
     df['embedding'] = embeddings
     return df
 
-# Load your data
-df = pd.read_csv('datasets/top_bottom_100_products.csv')
+# Load your data (product_catalog.csv is the authoritative source file)
+df = pd.read_csv('datasets/product_catalog.csv')
 
 # Generate embeddings
 df_with_embeddings = generate_embeddings_parallel(df)
@@ -43,6 +47,6 @@ df_with_embeddings = generate_embeddings_parallel(df)
 df_with_embeddings = df_with_embeddings.dropna(subset=['embedding'])
 
 # Save the results
-df_with_embeddings.to_csv('datasets/top_bottom_100_products_embeddings.csv', index=False)
+df_with_embeddings.to_csv('datasets/product_catalog_embeddings.csv', index=False)
 
-print(f"Processed {len(df_with_embeddings)} products. Results saved to 'top_bottom_100_products_embeddings.csv'.")
+print(f"Processed {len(df_with_embeddings)} products. Results saved to 'product_catalog_embeddings.csv'.")
