@@ -8,7 +8,9 @@ region = boto3_session.region_name
 bedrock_agent_runtime_client = boto3.client('bedrock-agent-runtime')
 
 model_id = os.environ.get('MODELID', "anthropic.claude-3-5-sonnet-20240620-v1:0")
-kb_id = os.environ.get('KBID', "AOTCUNBFFA")
+kb_id = os.environ.get('KBID')
+if not kb_id:
+    raise RuntimeError("KBID environment variable is required but not set.")
 
 model_arn = f'arn:aws:bedrock:{region}::foundation-model/{model_id}'
 

@@ -14,7 +14,7 @@ boto3_session = boto3.session.Session()
 region = boto3_session.region_name
 
 agent_id = os.environ.get('AGENTID')
-agent_alias_id = 'TSTALIASID'
+agent_alias_id = os.environ.get('AGENT_ALIAS_ID', 'TSTALIASID')
 
 logger = logging.getLogger()
 logger.setLevel("INFO")

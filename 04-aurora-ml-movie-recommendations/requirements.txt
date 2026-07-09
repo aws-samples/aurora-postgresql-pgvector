@@ -4,4 +4,3 @@ psycopg2-binary>=2.9.10
 pgvector>=0.3.6,<0.4
 urllib3>=2.7.0,<3
 boto3>=1.43.40
-anthropic>=0.64.0

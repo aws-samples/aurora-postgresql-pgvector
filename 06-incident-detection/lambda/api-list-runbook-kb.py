@@ -83,6 +83,8 @@ def update_dynamodb(id, username, output):
 
 def lambda_handler(event, context):
     print(event)
+    if not kb_id:
+        return { 'statusCode': 500, 'body': json.dumps('KBID environment variable is required but not set.') }
     try:
         query = event['queryStringParameters']['query']
         id = event['queryStringParameters']['id']

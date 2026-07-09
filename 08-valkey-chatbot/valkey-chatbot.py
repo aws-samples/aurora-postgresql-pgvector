@@ -108,10 +108,10 @@ def query_similar_texts(embedding, limit=3):
         ) as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT content, 1 - (embedding <-> %s::vector) AS similarity
+                    SELECT content, 1 - (embedding <=> %s::vector) AS similarity
                     FROM travel_knowledge_base
-                    WHERE 1 - (embedding <-> %s::vector) > 0.7
-                    ORDER BY embedding <-> %s::vector
+                    WHERE 1 - (embedding <=> %s::vector) > 0.7
+                    ORDER BY embedding <=> %s::vector
                     LIMIT %s
                 """, (embedding_literal, embedding_literal, embedding_literal, limit))
                 results = cur.fetchall()
@@ -121,42 +121,6 @@ def query_similar_texts(embedding, limit=3):
     except psycopg.Error as e:
         st.error(f"Database query error: {str(e)}")
         return []
-
-def generate_response(messages):
-    """Generate streaming response using Bedrock Claude"""
-    try:
-        formatted_messages = []
-        for i, msg in enumerate(messages):
-            if i % 2 == 0 and msg['role'] != 'user':
-                formatted_messages.append({"role": "user", "content": msg['content']})
-            elif i % 2 == 1 and msg['role'] != 'assistant':
-                formatted_messages.append({"role": "assistant", "content": msg['content']})
-            else:
-                formatted_messages.append(msg)
-       
-        if formatted_messages[-1]['role'] != 'user':
-            formatted_messages.append({"role": "user", "content": "Please respond to the above."})
-       
-        response = bedrock.invoke_model_with_response_stream(
-            modelId="anthropic.claude-3-haiku-20240307-v1:0",
-            body=json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 1000,
-                "messages": formatted_messages,
-                "temperature": 0.7,
-                "top_p": 0.95,
-            })
-        )
-       
-        for event in response['body']:
-            chunk = json.loads(event['chunk']['bytes'].decode('utf-8'))
-            if chunk['type'] == 'content_block_delta' and 'text' in chunk['delta']:
-                yield chunk['delta']['text']
-   
-    except ClientError as e:
-        yield "I apologize, but I'm having trouble generating a response right now."
-    except Exception as e:
-        yield "An unexpected error occurred. Please try again."
 
 # Chat History Management with ElastiCache
 class ChatHistoryManager:
@@ -288,11 +252,9 @@ class SemanticSearchCache:
         self.redis_client = redis_client
 
     def get_cache_key(self, text, embedding):
-        """Generate a unique cache key based on both text and embedding"""
-        # Use both the text and a truncated form of the embedding for the key
-        text_hash = hash(text.lower().strip())
-        emb_hash = hash(tuple(embedding[:10])) # Use first 10 dimensions for hash
-        return f"semantic_search:{text_hash}_{emb_hash}"
+        """Generate a unique cache key based on the query text"""
+        text_hash = hashlib.sha256(text.lower().strip().encode()).hexdigest()
+        return f"semantic_search:{text_hash}"
 
     def get_cached_search(self, text, embedding):
         """Get cached search results with timing"""
@@ -556,7 +518,7 @@ def main():
         st.sidebar.success(f"Logged in as {st.session_state.username}")
         
         LOGO_URL = "static/AZFlights.jpg"
-        st.sidebar.image(LOGO_URL, use_column_width=True)
+        st.sidebar.image(LOGO_URL, width="stretch")
 
         # Reset Chat and Logout buttons in sidebar
         col1, col2 = st.sidebar.columns(2)
@@ -572,7 +534,7 @@ def main():
             st.rerun()
             
         if col2.button("Logout"):
-            for key in st.session_state.keys():
+            for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
 
@@ -659,10 +621,12 @@ def main():
                         return
                
                     # Update chat history if response was successful
+                    success = False
+                    update_time = None
                     if full_response:
                         success, update_time = chat_manager.update_chat_history(
                             st.session_state.session_id, prompt, full_response)
-                   
+
                     if success:
                         st.session_state.update_times.append(update_time)
                    

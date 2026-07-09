@@ -8,15 +8,14 @@ CREATE OR REPLACE FUNCTION movie.get_top6_movies(search_query text) RETURNS TABL
 DECLARE r record;
 v vector(1536);
 rcnt integer;
-BEGIN RAISE NOTICE '%s',
-'{"inputText": "' || search_query || '"}'::text;
+BEGIN
 EXECUTE $x$
 SELECT aws_bedrock.invoke_model_get_embeddings(
                 model_id := 'amazon.titan-embed-text-v1',
                 content_type := 'application/json',
                 json_key := 'embedding',
                 model_input := $1::text
-        ) $x$ INTO v USING '{"inputText": "' || search_query || '"}'::text;
+        ) $x$ INTO v USING jsonb_build_object('inputText', search_query)::text;
 RETURN QUERY
 SELECT m.id,
         m.title,
@@ -54,32 +53,24 @@ GROUP BY id,
         ARRAY_TO_STRING(keywords, ' '),
         ARRAY_TO_STRING(genre_id, ' ') LOOP RAISE NOTICE 'working on movie id %',
         r.id;
-v1 := replace(
-        replace(
-                replace(
-                        r.title || ' ' || r.overview || ' ' || r.keywords || ' ' || r.genres || ' ' || r.credits,
-                        chr(39),
-                        ''
-                ),
-                '"',
-                ''
-        ),
-        '-',
-        ' '
+v1 := regexp_replace(
+        r.title || ' ' || r.overview || ' ' || r.keywords || ' ' || r.genres || ' ' || r.credits,
+        '\s\s+',
+        ' ',
+        'g'
 );
-v1 := regexp_replace(v1, '\s\s+', ' ', 'g');
 EXECUTE $x$
 SELECT aws_bedrock.invoke_model_get_embeddings(
                 model_id := 'amazon.titan-embed-text-v1',
                 content_type := 'application/json',
                 json_key := 'embedding',
                 model_input := $1::text
-        ) $x$ INTO v USING '{"inputText": "' || v1 || '"}'::text;
+        ) $x$ INTO v USING jsonb_build_object('inputText', v1)::text;
 UPDATE movie.movies
 set movie_embedding = v
 WHERE id = r.id;
 rcnt := rcnt + 1;
-IF rcnt > 10 THEN COMMIT;
+IF rcnt >= 10 THEN COMMIT;
 rcnt := 0;
 END IF;
 END LOOP;

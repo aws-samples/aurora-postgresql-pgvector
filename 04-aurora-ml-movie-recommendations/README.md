@@ -49,7 +49,6 @@ source env/bin/activate
 
 2. Configure `.env` file:
 ```bash
-DBDRIVER='psycopg2'
 DBUSER='username'
 DBPASSWORD='password'
 DBHOST='aurora-cluster-host'

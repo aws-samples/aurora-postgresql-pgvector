@@ -8,7 +8,6 @@ import os
 from dotenv import load_dotenv
 import boto3
 import json
-import base64
 import warnings
 import logging
 import time
@@ -40,38 +39,9 @@ bedrock = boto3.client(
     config=config
 )
 
-# Add this test function
-def test_bedrock_connection():
-    try:
-        response = bedrock.invoke_model(
-            modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
-            contentType="application/json",
-            accept="application/json",
-            body=json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 100,
-                "messages": [
-                    {"role": "user", "content": "Say hello"}
-                ]
-            })
-        )
-        response_body = json.loads(response.get('body').read())
-        return response_body['content'][0]['text']
-    except Exception as e:
-        print(f"Error type: {type(e)}")
-        print(f"Error message: {str(e)}")
-        raise e
-
 # Constants and configurations
 LOGO_URL = "static/Blaize.png"
 CLAUDE_MODEL_ID = "anthropic.claude-3-5-sonnet-20240620-v1:0"
-
-# Helper functions
-@st.cache_data
-def get_base64_of_bin_file(bin_file):
-    with open(bin_file, "rb") as f:
-        data = f.read()
-        return base64.b64encode(data).decode()
 
 # Database functions
 def get_db_connection():
@@ -97,47 +67,6 @@ def execute_db_query(query, params=None):
         logger.error(f"Database query error: {e}")
         st.error("Failed to execute database query.")
         return pd.DataFrame()
-
-# Functions for graphs
-def get_product_data():
-    query = """
-    SELECT "productId", product_description, category_name, stars, price, boughtinlastmonth, embedding
-    FROM bedrock_integration.product_catalog
-    """
-    return execute_db_query(query)
-
-def similarity_search(query_embedding, top_k=5):
-    """
-    SELECT "productId", product_description, category_name, stars, price, boughtinlastmonth,
-           imgURL, producturl,
-           1 - (embedding <=> %s::vector) AS similarity
-    FROM bedrock_integration.product_catalog
-    WHERE embedding IS NOT NULL
-    ORDER BY embedding <=> %s::vector
-    LIMIT %s
-    """
-    query_embedding_list = query_embedding.tolist() if isinstance(query_embedding, np.ndarray) else query_embedding
-    start_time = time.time()
-
-    try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(similarity_search.__doc__, 
-                          (query_embedding_list, query_embedding_list, min(int(top_k), 100)))
-                results = cur.fetchall()
-                
-                df = pd.DataFrame(results, columns=[
-                    'productId', 'product_description', 'category_name', 
-                    'stars', 'price', 'boughtinlastmonth', 
-                    'imgURL', 'producturl', 'similarity'
-                ])
-                
-                query_time = (time.time() - start_time) * 1000  # Convert to milliseconds
-                return df, query_time
-                
-    except Exception as e:
-        st.error(f"Error in similarity search: {str(e)}")
-        return pd.DataFrame(), 0
 
 def get_top_trending_categories(top_n=10):
     """
@@ -291,7 +220,7 @@ def show_product_insights():
                                   color='total_bought',
                                   color_continuous_scale=px.colors.sequential.Viridis)
                 fig_trending.update_layout(showlegend=True, height=400, yaxis={'categoryorder':'total ascending'})
-                st.plotly_chart(fig_trending, use_container_width=True)
+                st.plotly_chart(fig_trending, width="stretch")
             else:
                 st.warning("No trending categories data available")
 
@@ -310,7 +239,7 @@ def show_product_insights():
                                   title="Top 10 Highest Grossing Products",
                                   color_discrete_sequence=px.colors.qualitative.Vivid)
                 fig_grossing.update_layout(showlegend=True, height=400, legend_title_text='Category', yaxis={'categoryorder':'total ascending'})
-                st.plotly_chart(fig_grossing, use_container_width=True)
+                st.plotly_chart(fig_grossing, width="stretch")
             else:
                 st.warning("No revenue data available")
 
@@ -330,7 +259,7 @@ def show_product_insights():
                                      height=500,
                                      color_discrete_sequence=px.colors.qualitative.Bold)
                 fig_top_selling.update_layout(showlegend=True, legend_title_text='Category', yaxis={'categoryorder':'total ascending'})
-                st.plotly_chart(fig_top_selling, use_container_width=True)
+                st.plotly_chart(fig_top_selling, width="stretch")
             else:
                 st.warning("No sales data available")
 
@@ -349,7 +278,7 @@ def show_product_insights():
                                     color='avg_rating',
                                     color_continuous_scale=px.colors.sequential.Magma)
                 fig_categories.update_layout(height=400, yaxis={'categoryorder':'total ascending'})
-                st.plotly_chart(fig_categories, use_container_width=True)
+                st.plotly_chart(fig_categories, width="stretch")
             else:
                 st.warning("No rating data available")
 
@@ -366,7 +295,7 @@ def show_product_insights():
                                       hover_data=['product_description'],
                                       color_continuous_scale=px.colors.sequential.Inferno)
                 fig_best_selling.update_layout(showlegend=False, height=400, yaxis={'categoryorder':'total ascending'})
-                st.plotly_chart(fig_best_selling, use_container_width=True)
+                st.plotly_chart(fig_best_selling, width="stretch")
             else:
                 st.warning("No category sales data available")
 
@@ -381,7 +310,7 @@ def show_product_insights():
                                   color_discrete_sequence=px.colors.qualitative.G10)
                 fig_spending.update_traces(textposition='inside', textinfo='percent+label')
                 fig_spending.update_layout(showlegend=True, legend_title_text='Price Range', height=400)
-                st.plotly_chart(fig_spending, use_container_width=True)
+                st.plotly_chart(fig_spending, width="stretch")
             else:
                 st.warning("No spending habits data available")
 
@@ -469,7 +398,7 @@ def main():
     st.subheader('Product Insights - Blaize Bazaar', divider='orange')
     
     # Sidebar
-    st.sidebar.image(LOGO_URL, use_container_width=True)
+    st.sidebar.image(LOGO_URL, width="stretch")
     st.sidebar.title('**About**')
     st.sidebar.info("""
     This dashboard provides comprehensive product insights using AI-powered analysis.

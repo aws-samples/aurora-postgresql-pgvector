@@ -483,23 +483,27 @@ function activate_venv()
 
 function set_bedrock_env_vars() {
     echo "Setting Bedrock and S3 environment variables from CloudFormation outputs..."
-    
-    # Get values directly from CloudFormation outputs without specifying stack name
+
+    # CFN template (genai-dat301-labs_c9.yml) output keys:
+    #   KnowledgeBaseS3SourceBucketName -> S3_KB_BUCKET
+    #   KBID                            -> BEDROCK_KB_ID
+    #   AgentID                         -> BEDROCK_AGENT_ID
+    # No AgentAliasId output exists in the template; derive it via the Bedrock API below.
     export S3_KB_BUCKET=$(aws cloudformation describe-stacks \
-        --query "Stacks[].Outputs[?(OutputKey == 'BedrockS3Bucket')][].{OutputValue:OutputValue}" --output text 2>/dev/null || echo "")
-    
+        --query "Stacks[].Outputs[?(OutputKey == 'KnowledgeBaseS3SourceBucketName')][].{OutputValue:OutputValue}" --output text 2>/dev/null || echo "")
+
     export BEDROCK_KB_ID=$(aws cloudformation describe-stacks \
-        --query "Stacks[].Outputs[?(OutputKey == 'BedrockKnowledgeBaseId')][].{OutputValue:OutputValue}" --output text 2>/dev/null || echo "")
-    
+        --query "Stacks[].Outputs[?(OutputKey == 'KBID')][].{OutputValue:OutputValue}" --output text 2>/dev/null || echo "")
+
     export BEDROCK_AGENT_ID=$(aws cloudformation describe-stacks \
-        --query "Stacks[].Outputs[?(OutputKey == 'BedrockAgentId')][].{OutputValue:OutputValue}" --output text 2>/dev/null || echo "")
-    
-    # Get full alias ID and extract the actual alias part
-    local FULL_ALIAS_ID=$(aws cloudformation describe-stacks \
-        --query "Stacks[].Outputs[?(OutputKey == 'BedrockAgentAliasId')][].{OutputValue:OutputValue}" --output text 2>/dev/null || echo "")
-    
-    if [ -n "$FULL_ALIAS_ID" ]; then
-        export BEDROCK_AGENT_ALIAS_ID=$(echo "$FULL_ALIAS_ID" | cut -d'|' -f2)
+        --query "Stacks[].Outputs[?(OutputKey == 'AgentID')][].{OutputValue:OutputValue}" --output text 2>/dev/null || echo "")
+
+    # Derive agent alias ID via the Bedrock API (no CFN output exists for the alias)
+    if [ -n "$BEDROCK_AGENT_ID" ]; then
+        export BEDROCK_AGENT_ALIAS_ID=$(aws bedrock-agent list-agent-aliases \
+            --agent-id "$BEDROCK_AGENT_ID" \
+            --query "agentAliasSummaries[0].agentAliasId" \
+            --output text 2>/dev/null || echo "")
     fi
     
     # Determine the profile file to use

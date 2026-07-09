@@ -247,10 +247,13 @@ def gather_metrics(db_instance_identifier, metric_name, metric_time, metric_stat
 
     response = cloudwatchClient.get_metric_data(
         MetricDataQueries=metricQueries,
-        StartTime=start_date, 
-        EndTime=end_date,    
+        StartTime=start_date,
+        EndTime=end_date,
     )
-    metric_value = int(response["MetricDataResults"][0]['Values'][0])
+    values = response["MetricDataResults"][0].get('Values', [])
+    if not values:
+        return f"No datapoints available for {metric_name}; unable to retrieve metric value."
+    metric_value = int(values[0])
     return f"{outText} {metric_value}"
 
 #==============================================================================================================================            

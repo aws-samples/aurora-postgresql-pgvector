@@ -195,4 +195,4 @@ async def async_handler(event, context):
     return api_response
 
 def lambda_handler(event, context):
-    return asyncio.get_event_loop().run_until_complete(async_handler(event, context))
+    return asyncio.run(async_handler(event, context))

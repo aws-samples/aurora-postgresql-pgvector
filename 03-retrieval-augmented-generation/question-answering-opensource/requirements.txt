@@ -6,7 +6,7 @@ langchain-postgres>=0.0.17
 langchain-text-splitters>=1.1.2
 PyPDF2>=3.0.1
 python-dotenv>=1.2.2
-psycopg2-binary>=2.9.10
+psycopg[binary]>=3.3.4
 altair>=5.4.1
 pgvector>=0.3.6,<0.4
 huggingface_hub

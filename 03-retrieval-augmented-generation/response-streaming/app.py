@@ -9,7 +9,6 @@ from langchain_core.messages import (
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts import SystemMessagePromptTemplate
 from langchain_core.prompts import HumanMessagePromptTemplate
-from langchain_postgres import PGVector
 from langchain_postgres.vectorstores import PGVector
 from langchain_classic.chains import ConversationalRetrievalChain
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -199,8 +198,6 @@ if __name__ == '__main__':
     embeddings = BedrockEmbeddings(model_id= "amazon.titan-embed-text-v2:0", client=BEDROCK_CLIENT)
     
     # Create the connection string for pgvector. Ref: https://github.com/langchain-ai/langchain-postgres/blob/main/examples/vectorstore.ipynb
-
-    # Create the connection string for pgvector. Ref: https://github.com/langchain-ai/langchain-postgres/blob/main/examples/vectorstore.ipynb
     db_user = os.getenv('PGUSER') or os.getenv('PGVECTOR_USER')
     db_password = os.getenv('PGPASSWORD') or os.getenv('PGVECTOR_PASSWORD')
     db_host = os.getenv('PGHOST') or os.getenv('PGVECTOR_HOST')
@@ -208,5 +205,4 @@ if __name__ == '__main__':
     db_name = os.getenv('PGDATABASE') or os.getenv('PGVECTOR_DATABASE')
     connection = f"postgresql+psycopg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
-
-main()
+    main()

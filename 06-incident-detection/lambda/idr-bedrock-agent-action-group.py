@@ -26,7 +26,7 @@ secretsClient = boto3.client('secretsmanager', region_name=region_name,config=co
 cloudwatchClient = boto3.client('cloudwatch', region_name=region_name,config=config)
 
 
-classOrder = ['micro','small','medium','large','xlarge','2xlarge','4xlarge','8xlarge','12xlarge','16xlarge','14xlarge','32xlarge','na']
+classOrder = ['micro','small','medium','large','xlarge','2xlarge','4xlarge','8xlarge','12xlarge','14xlarge','16xlarge','32xlarge','na']
 
 #==============================================================================================================================            
 # Helper functions
@@ -208,7 +208,7 @@ def get_current_storage_size(db_instance_identifier):
     """
       Function to get the current storage size of RDS Cluster.
     """
-    
+
     response = get_instance_details_helper(db_instance_identifier)
     allocated_storage_size = response['AllocatedStorage']
 
@@ -234,10 +234,13 @@ def get_current_storage_size(db_instance_identifier):
                 }
             },
         ],
-        StartTime=start_date, 
-        EndTime=end_date,    
+        StartTime=start_date,
+        EndTime=end_date,
     )
-    current_free_storage = int(response["MetricDataResults"][0]['Values'][0]/1024/1024/1024)
+    values = response["MetricDataResults"][0].get('Values', [])
+    if not values:
+        return "No FreeStorageSpace datapoints available; unable to calculate current storage size."
+    current_free_storage = int(values[0]/1024/1024/1024)
     current_storage = allocated_storage_size - current_free_storage
     lambda_logger.info(current_storage)
     return f"Current  storage is {current_storage} GB"
@@ -486,8 +489,7 @@ def lambda_handler(event, context):
         responseMessage = None
         
         db_instance_identifier = None
-        new_storage_size = None
-        
+
         if function == "get_instance_details":
             db_instance_identifier = get_param(parameters, "db_instance_identifier")
             responseMessage = get_instance_details(db_instance_identifier)

@@ -103,32 +103,35 @@ def main():
         pdf_docs = st.file_uploader(
             "Upload your PDFs here and click on 'Process'", type="pdf", accept_multiple_files=True)
         if st.button("Process"):
-            with st.spinner("Processing"):
-                # get pdf text
-                raw_text = get_pdf_text(pdf_docs)
+            if not pdf_docs:
+                st.error("Please upload at least one PDF document before processing.")
+            else:
+                with st.spinner("Processing"):
+                    # get pdf text
+                    raw_text = get_pdf_text(pdf_docs)
 
-                # get the text chunks
-                text_chunks = get_text_chunks(raw_text)
+                    # get the text chunks
+                    text_chunks = get_text_chunks(raw_text)
 
-                # create vector store
-                vectorstore = get_vectorstore(text_chunks)
+                    # create vector store
+                    vectorstore = get_vectorstore(text_chunks)
 
-                # create conversation chain
-                st.session_state.conversation = get_conversation_chain(vectorstore)
+                    # create conversation chain
+                    st.session_state.conversation = get_conversation_chain(vectorstore)
 
-                st.success('PDF uploaded successfully!', icon="✅")
+                    st.success('PDF uploaded successfully!', icon="✅")
 
 
 if __name__ == '__main__':
     load_dotenv()
     
-    CONNECTION_STRING = PGVector.connection_string_from_db_params(                                                  
-        driver = os.environ.get("PGVECTOR_DRIVER"),
-        user = os.environ.get("PGVECTOR_USER"),                                      
-        password = os.environ.get("PGVECTOR_PASSWORD"),                                  
-        host = os.environ.get("PGVECTOR_HOST"),                                            
-        port = os.environ.get("PGVECTOR_PORT"),                                          
-        database = os.environ.get("PGVECTOR_DATABASE")                                       
+    CONNECTION_STRING = PGVector.connection_string_from_db_params(
+        driver = os.environ.get("PGVECTOR_DRIVER", "psycopg"),
+        user = os.environ.get("PGVECTOR_USER"),
+        password = os.environ.get("PGVECTOR_PASSWORD"),
+        host = os.environ.get("PGVECTOR_HOST"),
+        port = os.environ.get("PGVECTOR_PORT"),
+        database = os.environ.get("PGVECTOR_DATABASE")
 )  
 
     main()

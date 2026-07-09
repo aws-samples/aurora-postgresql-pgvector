@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  python-compile:
+    name: Python syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile all .py files
+        run: |
+          find . -name "*.py" -not -path "*/node_modules/*" | xargs python -m py_compile
+
+  notebooks-valid:
+    name: Validate notebooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install nbformat
+        run: pip install nbformat
+      - name: Validate all .ipynb files
+        run: |
+          python - <<'EOF'
+          import sys, pathlib, nbformat
+          errors = []
+          for nb_path in pathlib.Path(".").rglob("*.ipynb"):
+              try:
+                  nbformat.read(nb_path.open(), as_version=4)
+              except Exception as e:
+                  errors.append(f"{nb_path}: {e}")
+          if errors:
+              print("Notebook validation errors:")
+              for err in errors:
+                  print(" ", err)
+              sys.exit(1)
+          print(f"All notebooks valid.")
+          EOF
+
+  requirements-resolve:
+    name: Requirements dry-run (${{ matrix.requirements }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        requirements:
+          - 01-semantic-search/requirements1.txt
+          - 01-semantic-search/requirements2.txt
+          - 02-product-recommendations/requirements.txt
+          - 03-retrieval-augmented-generation/question-answering-bedrock/requirements.txt
+          - 03-retrieval-augmented-generation/response-streaming/requirements.txt
+          - 03-retrieval-augmented-generation/question-answering-opensource/requirements.txt
+          - 04-aurora-ml-movie-recommendations/requirements.txt
+          - 05-blaize-bazaar/requirements.txt
+          - 06-incident-detection/ui/requirements.txt
+          - 06-incident-detection/script/misc/lambda/s3upload/requirements.txt
+          - 07-aurora-ml-chatbot/requirements.txt
+          - 08-valkey-chatbot/requirements.txt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Dry-run install ${{ matrix.requirements }}
+        run: pip install --dry-run --quiet -r ${{ matrix.requirements }}
