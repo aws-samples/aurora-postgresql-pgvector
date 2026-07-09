@@ -28,7 +28,7 @@ A RAG application with real-time streaming responses, powered by Amazon Bedrock 
    git clone https://github.com/aws-samples/aurora-postgresql-pgvector.git
    cd aurora-postgresql-pgvector/03-retrieval-augmented-generation/response-streaming
 
-   python3.11 -m venv env
+   python3.13 -m venv env
    source env/bin/activate
    ```
 

@@ -54,7 +54,7 @@ See the [Aurora ML setup guide](https://docs.aws.amazon.com/AmazonRDS/latest/Aur
 
 **Other requirements:**
 - Aurora PostgreSQL cluster (Aurora PostgreSQL 18.3 recommended)
-- Python 3.11+
+- Python 3.13+
 
 ### Installation Steps
 
@@ -62,7 +62,7 @@ See the [Aurora ML setup guide](https://docs.aws.amazon.com/AmazonRDS/latest/Aur
 ```bash
 git clone https://github.com/aws-samples/aurora-postgresql-pgvector.git
 cd aurora-postgresql-pgvector/04-aurora-ml-movie-recommendations
-python3.11 -m venv env
+python3.13 -m venv env
 source env/bin/activate
 ```
 

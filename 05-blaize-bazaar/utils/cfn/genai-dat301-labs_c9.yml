@@ -569,9 +569,9 @@ Resources:
       Description: Psycopg layer with binary and pool extensions
       Content:
         S3Bucket: dat301-psycopg-layer
-        S3Key: psycopg-layer.zip
+        S3Key: psycopg-layer-py313.zip
       CompatibleRuntimes:
-        - python3.11
+        - python3.13
 
   LambdaBootstrapRole:
     Type: AWS::IAM::Role
@@ -651,7 +651,7 @@ Resources:
         - !Ref PsycopgLayer
       Handler: index.lambda_handler
       Role: !GetAtt LambdaBootstrapRole.Arn
-      Runtime: python3.11
+      Runtime: python3.13
       MemorySize: 2048
       Timeout: 900
       Environment:
@@ -782,7 +782,7 @@ Resources:
       Role: !GetAtt LambdaBootstrapRole.Arn
       Layers:
         - !Ref PsycopgLayer
-      Runtime: python3.11
+      Runtime: python3.13
       Timeout: 900
       MemorySize: 2048
       Environment:
@@ -1208,7 +1208,7 @@ Resources:
         Fn::GetAtt:
         - C9LambdaExecutionRole
         - Arn
-      Runtime: python3.11
+      Runtime: python3.13
       MemorySize: 2056
       Timeout: '900'
       Code:
@@ -1422,7 +1422,7 @@ Resources:
         - !Ref PsycopgLayer
       Timeout: 600
       Role: !GetAtt "LambdaBasicExecutionRole.Arn"
-      Runtime: python3.11
+      Runtime: python3.13
       Environment:
         Variables:
           DB_HOST: !GetAtt DBCluster.Endpoint.Address
@@ -1989,7 +1989,7 @@ Resources:
                   'statusCode': 200,
                   'body': json.dumps('response')
               }
-      Runtime: python3.11
+      Runtime: python3.13
       Timeout: 300
       Environment:
         Variables:
@@ -2053,7 +2053,7 @@ Resources:
               except Exception as e:
                   print(e)
                   cfnresponse.send(event, context, cfnresponse.FAILED, {})
-      Runtime: python3.11
+      Runtime: python3.13
       Timeout: 60
 
   NotificationSetupRole:

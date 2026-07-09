@@ -27,8 +27,8 @@ export BLAIZE_PROJ_NAME="05-blaize-bazaar"
 export BLAIZE_PATH="/workshop/aurora-postgresql-pgvector/${BLAIZE_PROJ_NAME}"
 
 # Python configuration
-export PYTHON_MAJOR_VERSION="3.11"
-export PYTHON_MINOR_VERSION="9"
+export PYTHON_MAJOR_VERSION="3.13"
+export PYTHON_MINOR_VERSION="14"
 export PYTHON_VERSION="${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}"
 
 # Get AWS region from environment or default to us-west-2
@@ -154,7 +154,7 @@ function setup_venv()
 
     echo "Creating virtual environment with Python ${PYTHON_MAJOR_VERSION}..."
     
-    # Use Python 3.11 explicitly
+    # Use Python 3.13 explicitly
     PYTHON_CMD="/usr/local/bin/python${PYTHON_MAJOR_VERSION}"
     
     if ! command -v $PYTHON_CMD &> /dev/null; then
@@ -398,7 +398,7 @@ function install_python3()
     echo "Installing Python ${PYTHON_VERSION}"
     print_line
 
-    # Check if Python 3.11 is already installed
+    # Check if Python 3.13 is already installed
     echo "Checking if python${PYTHON_MAJOR_VERSION} is already installed"
     if command -v /usr/local/bin/python${PYTHON_MAJOR_VERSION} &> /dev/null; then 
         echo "Python${PYTHON_MAJOR_VERSION} already exists"
@@ -564,7 +564,7 @@ function setup_code_editor_bashrc() {
 
 # Workshop environment variables
 export PATH="/usr/local/bin:$PATH"
-export PYTHONPATH="/usr/local/lib/python3.11/site-packages:$PYTHONPATH"
+export PYTHONPATH="/usr/local/lib/python3.13/site-packages:$PYTHONPATH"
 
 # PostgreSQL connection helpers - simple psql command works now!
 alias psql='psql -h $PGHOST -U $PGUSER -d postgres'
@@ -607,7 +607,7 @@ echo "📊 Database Commands:"
 echo "   psql                                   - Connect to Aurora PostgreSQL (passwordless!)"
 echo "   python3 /workshop/test_connection.py   - Test database connection"
 echo ""
-echo "🐍 Python: $(/usr/local/bin/python3.11 --version 2>/dev/null || python3 --version 2>/dev/null || echo 'Not configured')"
+echo "🐍 Python: $(/usr/local/bin/python3.13 --version 2>/dev/null || python3 --version 2>/dev/null || echo 'Not configured')"
 echo ""
 echo "📁 Workshop Directory: /workshop/aurora-postgresql-pgvector"
 echo ""
@@ -742,8 +742,8 @@ echo "=== Workshop Environment Check ==="
 echo ""
 
 # Check Python
-echo "Python 3.11:"
-/usr/local/bin/python3.11 --version 2>/dev/null && echo "  ✅ Installed" || echo "  ❌ Not found"
+echo "Python 3.13:"
+/usr/local/bin/python3.13 --version 2>/dev/null && echo "  ✅ Installed" || echo "  ❌ Not found"
 
 # Check PostgreSQL
 echo "PostgreSQL:"
@@ -811,7 +811,7 @@ streamlit run Home.py --server.port 8501
 ```
 
 ### Python Environment
-- **Global Python**: 3.11.9 at `/usr/local/bin/python3.11`
+- **Global Python**: 3.13.14 at `/usr/local/bin/python3.13`
 - **Virtual Environment**: `/workshop/aurora-postgresql-pgvector/05-blaize-bazaar/venv-blaize-bazaar`
 - **Packages**: boto3, psycopg, streamlit, langchain, and more
 
@@ -966,10 +966,10 @@ function run_final_checks()
         echo "Blaize Bazaar project directory : NOTOK (optional)"
     fi
     
-    # Check Python 3.11
-    if command -v /usr/local/bin/python3.11 &> /dev/null; then
-        echo "Python3.11 installation : OK"
-        /usr/local/bin/python3.11 --version
+    # Check Python 3.13
+    if command -v /usr/local/bin/python3.13 &> /dev/null; then
+        echo "Python3.13 installation : OK"
+        /usr/local/bin/python3.13 --version
     else
         echo "Error: python3.11 command not found : NOTOK"
     fi

@@ -2,11 +2,12 @@
 
 <div align="center">
 
-[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Aurora PostgreSQL](https://img.shields.io/badge/Aurora-PostgreSQL-527FFF?style=for-the-badge&logo=amazonrds&logoColor=white)](https://aws.amazon.com/rds/aurora/)
+[![Python](https://img.shields.io/badge/Python-3.13%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Aurora PostgreSQL](https://img.shields.io/badge/Aurora_PostgreSQL-18.3-527FFF?style=for-the-badge&logo=amazonrds&logoColor=white)](https://aws.amazon.com/rds/aurora/)
 [![Amazon Bedrock](https://img.shields.io/badge/Amazon-Bedrock-FF9900?style=for-the-badge&logo=amazonwebservices&logoColor=white)](https://aws.amazon.com/bedrock/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18.3-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![pgvector](https://img.shields.io/badge/pgvector-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
+[![Claude Sonnet 5](https://img.shields.io/badge/Claude-Sonnet_5-D97757?style=for-the-badge&logo=anthropic&logoColor=white)](https://aws.amazon.com/bedrock/claude/)
+[![pgvector](https://img.shields.io/badge/pgvector-HNSW-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
+[![Strands Agents](https://img.shields.io/badge/Strands-Agents-232F3E?style=for-the-badge&logo=amazonwebservices&logoColor=white)](https://strandsagents.com/)
 
 ![License](https://img.shields.io/badge/License-MIT--0-green?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Educational-blue?style=for-the-badge)
@@ -19,11 +20,12 @@ Use the hosted Workshop Studio experience when you want the fastest path through
 
 ## What You Will Build
 
-- Semantic search over structured and unstructured content with Aurora PostgreSQL and pgvector.
+- Semantic search over structured and unstructured content with Aurora PostgreSQL and pgvector (HNSW indexes, cosine distance).
 - Product and movie recommendation flows powered by embeddings and similarity search.
-- RAG applications that retrieve context from Aurora PostgreSQL and generate answers with Amazon Bedrock.
+- RAG applications built with LangChain (LCEL) that retrieve context from Aurora PostgreSQL and generate answers through the Bedrock Converse API.
 - Streamlit apps, notebooks, and Lambda functions that show how these patterns fit into real application workflows.
-- Operational examples for incident analysis, remediation, and semantic caching.
+- Agentic incident remediation two ways: managed Bedrock Agents and a code-first Strands Agents implementation.
+- Semantic caching with ElastiCache for Valkey to cut latency and model cost on repeated queries.
 
 ## Workshop Labs
 
@@ -64,9 +66,9 @@ cd aurora-postgresql-pgvector
 You will need:
 
 - An AWS account with permissions for the services used by the selected lab.
-- Amazon Bedrock model access for labs that generate embeddings or text.
-- Access to an Aurora PostgreSQL cluster with the `vector` extension enabled.
-- Python 3.11+ and PostgreSQL client tools.
+- Amazon Bedrock model access (Claude Sonnet 5, Claude Haiku 4.5, and Titan Text Embeddings V2) for labs that generate embeddings or text.
+- An Aurora PostgreSQL 18.3 cluster with the `vector` extension enabled.
+- Python 3.13+ and PostgreSQL client tools.
 
 Most labs include their own `requirements.txt`, `.env` example, notebook, or Streamlit app. Start with the README in the lab directory you want to run.
 
@@ -79,16 +81,25 @@ Most labs include their own `requirements.txt`, `.env` example, notebook, or Str
 - **Semantic caching:** Use embedding similarity to reuse prior responses when a new query is close enough.
 - **Agentic workflows:** Connect alerts, runbooks, and remediation actions into operational flows.
 
-## Model and Embedding Standards
+## Platform Standards
 
-- **Embeddings:** Amazon Titan Text Embeddings V2 (`amazon.titan-embed-text-v2:0`, 1024 dimensions). Vector columns are `vector(1024)`.
-- **Generation:** Claude Sonnet 5 via Bedrock cross-region inference profiles (`global.anthropic.claude-sonnet-5`). Each lab reads the model ID from the `BEDROCK_MODEL_ID` environment variable (or the lab-specific equivalent) so you can override it at runtime. `global.anthropic.claude-sonnet-5` is also available as an override.
+| Component | Standard |
+| --- | --- |
+| Aurora PostgreSQL | 18.3 (`aurora-postgresql18` parameter group family) |
+| Python | 3.13+ |
+| Generation model | Claude Sonnet 5 via the Bedrock global cross-region inference profile (`global.anthropic.claude-sonnet-5`); Claude Haiku 4.5 (`us.anthropic.claude-haiku-4-5-20251001-v1:0`) on latency-sensitive paths |
+| Embeddings | Amazon Titan Text Embeddings V2 (`amazon.titan-embed-text-v2:0`, 1024 dimensions); vector columns are `vector(1024)` |
+| Vector indexing | pgvector HNSW with cosine distance (`vector_cosine_ops`, `<=>`) |
+| Bedrock API | Converse / ConverseStream for generation; `invoke_model` only for embeddings and Aurora ML in-database calls |
+| PostgreSQL driver | psycopg (v3) |
+
+Every lab reads its model IDs from environment variables (`BEDROCK_MODEL_ID`, `EMBEDDING_MODEL_ID`, or the lab-specific equivalent) so you can override them at runtime without code changes.
 
 ## Development Environment
 
 The hosted workshop environment is pre-configured with:
 
-- Python 3.11+ with the required ML and application libraries.
+- Python 3.13+ with the required ML and application libraries.
 - PostgreSQL 18 client tools.
 - AWS CLI and AWS SDKs.
 - Jupyter notebook and Streamlit support.

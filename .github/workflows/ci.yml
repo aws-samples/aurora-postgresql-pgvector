@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
       - name: Compile all .py files
         run: |
           find . -name "*.py" -not -path "*/node_modules/*" | xargs python -m py_compile
@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
       - name: Install nbformat
         run: pip install nbformat
       - name: Validate all .ipynb files
@@ -76,6 +76,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
       - name: Dry-run install ${{ matrix.requirements }}
         run: pip install --dry-run --quiet -r ${{ matrix.requirements }}

@@ -5,8 +5,8 @@ export PROJ_NAME="DAT307"
 #export GITHUB_URL="https://github.com/aws-samples/"
 export GITHUB_NAME="aurora-postgresql-pgvector"
 export GITHUB_URL="https://github.com/ajrajkumar/"
-export PYTHON_MAJOR_VERSION="3.12"
-export PYTHON_MINOR_VERSION="1"
+export PYTHON_MAJOR_VERSION="3.13"
+export PYTHON_MINOR_VERSION="14"
 export PYTHON_VERSION="${PYTHON_MAJOR_VERSION}.${PYTHON_MINOR_VERSION}"
 export PGVERSION="16.3"
 export BASEDIR=${HOME}/environment/${PROJ_NAME}
@@ -193,7 +193,7 @@ function initialize_pgbench()
 function streamlit_requirements()
 {
     cd ~/environment/DAT307/ui
-    pip3.12 install -r requirements.txt > ${TERM} 2>&1
+    pip3.13 install -r requirements.txt > ${TERM} 2>&1
 }
 
 function install_python3()

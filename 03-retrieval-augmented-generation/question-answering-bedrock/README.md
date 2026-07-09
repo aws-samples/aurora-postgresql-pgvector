@@ -31,7 +31,7 @@ Build a Retrieval Augmented Generation (RAG) application powered by Amazon Bedro
 
 2. Create and activate a virtual environment:
    ```bash
-   python3.11 -m venv env
+   python3.13 -m venv env
    source env/bin/activate
    ```
 

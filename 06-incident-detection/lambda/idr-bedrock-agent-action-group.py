@@ -91,7 +91,7 @@ def getNextInstanceClass(db_instance_identifier, currentClass):
     if nextClass == "na":
         return "NA"
     
-    nextClass = f"{currentClass.split(".")[0]}.{currentClass.split(".")[1]}.{nextClass}"
+    nextClass = f"{currentClass.split('.')[0]}.{currentClass.split('.')[1]}.{nextClass}"
     lambda_logger.info(f"Checking the availability of {nextClass}")
     
     response = get_instance_details_helper(db_instance_identifier)
