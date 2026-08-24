@@ -61,11 +61,17 @@ jobs:
               for i, cell in enumerate(nb.cells):
                   if cell.cell_type != "code":
                       continue
-                  src = "".join(cell.source)
-                  # IPython magics and shell escapes are not valid Python.
-                  if any(line.lstrip().startswith(("%", "!"))
-                         for line in src.splitlines()):
+                  lines = "".join(cell.source).splitlines()
+                  # A %%cell magic means the body is not Python at all -- skip it.
+                  first = next((l for l in lines if l.strip()), "")
+                  if first.lstrip().startswith("%%"):
                       continue
+                  # Blank only the magic / shell-escape lines, keeping line numbers aligned
+                  # so reported line numbers still point at the real offending line.
+                  src = "\n".join(
+                      "" if l.lstrip().startswith(("%", "!")) else l
+                      for l in lines
+                  )
                   try:
                       ast.parse(src)
                   except SyntaxError as e:
