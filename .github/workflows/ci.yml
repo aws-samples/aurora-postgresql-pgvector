@@ -68,7 +68,7 @@ jobs:
                       continue
                   lines = "".join(cell.source).splitlines()
                   first = next((l for l in lines if l.strip()), "").lstrip()
-                  if first.startswith("%%") and not first.split()[0] in PYTHON_CELL_MAGICS:
+                  if first.startswith("%%") and first.split()[0] not in PYTHON_CELL_MAGICS:
                       continue
                   # Blank the magic / shell-escape lines, keeping line numbers aligned so a
                   # reported line number still points at the real offending line.
