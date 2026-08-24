@@ -55,6 +55,11 @@ jobs:
           import ast, pathlib, sys
           import nbformat
 
+          # Cell magics whose body IS Python -- the magic only wraps or measures it, so
+          # the body must still be compiled. Anything else (%%bash, %%sql, %%html,
+          # %%writefile, ...) has a genuinely non-Python body and is skipped wholesale.
+          PYTHON_CELL_MAGICS = ("%%time", "%%timeit", "%%capture", "%%prun")
+
           errors = []
           for nb_path in sorted(pathlib.Path(".").rglob("*.ipynb")):
               nb = nbformat.read(nb_path.open(), as_version=4)
@@ -62,12 +67,16 @@ jobs:
                   if cell.cell_type != "code":
                       continue
                   lines = "".join(cell.source).splitlines()
-                  # A %%cell magic means the body is not Python at all -- skip it.
-                  first = next((l for l in lines if l.strip()), "")
-                  if first.lstrip().startswith("%%"):
+                  first = next((l for l in lines if l.strip()), "").lstrip()
+                  if first.startswith("%%") and not first.split()[0] in PYTHON_CELL_MAGICS:
                       continue
-                  # Blank only the magic / shell-escape lines, keeping line numbers aligned
-                  # so reported line numbers still point at the real offending line.
+                  # Blank the magic / shell-escape lines, keeping line numbers aligned so a
+                  # reported line number still points at the real offending line.
+                  # Known limits of this line-prefix heuristic, neither present in this repo
+                  # today: an inline line-magic such as `%time result = compute(` has its
+                  # whole line blanked, so a syntax error on that line is not seen; and a
+                  # shell-capture assignment such as `files = !ls -la` does not start with %
+                  # or !, so it is parsed as-is and would report a spurious error.
                   src = "\n".join(
                       "" if l.lstrip().startswith(("%", "!")) else l
                       for l in lines
