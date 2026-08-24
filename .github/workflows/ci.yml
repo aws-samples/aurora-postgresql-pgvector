@@ -49,6 +49,49 @@ jobs:
           print(f"All notebooks valid.")
           EOF
 
+      - name: Compile notebook code cells
+        run: |
+          python - <<'EOF'
+          import ast, pathlib, sys
+          import nbformat
+
+          errors = []
+          for nb_path in sorted(pathlib.Path(".").rglob("*.ipynb")):
+              nb = nbformat.read(nb_path.open(), as_version=4)
+              for i, cell in enumerate(nb.cells):
+                  if cell.cell_type != "code":
+                      continue
+                  src = "".join(cell.source)
+                  # IPython magics and shell escapes are not valid Python.
+                  if any(line.lstrip().startswith(("%", "!"))
+                         for line in src.splitlines()):
+                      continue
+                  try:
+                      ast.parse(src)
+                  except SyntaxError as e:
+                      errors.append(f"{nb_path} cell {i}: {type(e).__name__}: {e.msg} (line {e.lineno})")
+          if errors:
+              print("Notebook code cells failed to compile:")
+              for err in errors:
+                  print(" ", err)
+              sys.exit(1)
+          print("All notebook code cells compile.")
+          EOF
+
+      - name: Check for banned dependencies
+        run: |
+          # pandarallel ships sdist-only and is unmaintained since Oct 2023, so
+          # pip must build it at install time -- the reported install failure.
+          # setuptools==65.5.0 was pinned only to make that build work.
+          status=0
+          for token in pandarallel 'setuptools==65.5.0'; do
+            if grep -rIn --include='*.ipynb' --include='requirements*.txt' -e "$token" .; then
+              echo "ERROR: '$token' was reintroduced (see matches above)"
+              status=1
+            fi
+          done
+          exit $status
+
   # NOTE: 06-incident-detection/strands-agent/requirements.txt is intentionally
   # excluded from the matrix below — strands-agents pulls a large dependency
   # tree that makes dry-run resolution slow; its .py files are covered by the
