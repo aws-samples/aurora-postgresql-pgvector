@@ -1,0 +1,345 @@
+# MIRROR: this file is a copy of static/genai-pgvector-labs.yml in the workshop
+# content repo (Workshop Studio ID 31d6eec7-687f-495c-8ad6-aa7f38c803fb). It is
+# published here because the content repo is not public and Workshop Studio does
+# not publish the root template to the assets bucket, so self-paced participants
+# would have nothing to launch. Change the content repo first, then re-copy.
+---
+## GenAI pgvector labs main stack with VPC-Integrated Code Editor
+## Infrastructure template for GenAI pgvector labs in Workshop Studio
+## This version deploys Code Editor within the workshop's custom VPC with all participant outputs visible
+## Changelog:
+##  Who        Date        What
+##  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##
+## Dependencies:
+## none
+##
+## This sample code is made available under the MIT-0 license. See the LICENSE file.
+
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: >
+  This template deploys a VPC with Code Editor integrated, Aurora DB Cluster, and a Amazon SageMaker Notebook Instance
+
+Parameters:
+  TemplateName:
+    Type: String
+    Default: genai-pgvector-labs
+    Description: Name used for different elements created.
+
+  VpcName:
+    Default: APGPGVectorWorkshop
+    Type: String
+
+  VpcCIDR:
+    Default: 10.0.0.0/16
+    Type: String
+
+  PublicSubnetACidr:
+    Default: 10.0.0.0/24
+    Type: String
+
+  PublicSubnetBCidr:
+    Default: 10.0.1.0/24
+    Type: String
+
+  PublicSubnetCCidr:
+    Default: 10.0.2.0/24
+    Type: String
+
+  PrivateSubnetACidr:
+    Default: 10.0.10.0/24
+    Type: String
+
+  PrivateSubnetBCidr:
+    Default: 10.0.11.0/24
+    Type: String
+
+  PrivateSubnetCCidr:
+    Default: 10.0.12.0/24
+    Type: String
+
+  DefaultCodeRepository:
+    Default: https://github.com/aws-samples/aurora-postgresql-pgvector.git
+    Type: String
+
+  ParticipantRoleArn:
+    Type: String
+    Description: Workshop studio magic variable ParticipantRoleArn
+
+  PublicAssetsBucketName:
+    Type: String
+    Description: Workshop studio magic variable AssetsBucketName
+    Default: ws-assets-prod-iad-r-pdx-f3b3f9f1a7d6a3d0
+
+  PublicAssetsBucketPrefix:
+    Type: String
+    Description: Workshop studio magic variable AssetsBucketPrefix
+    Default: 31d6eec7-687f-495c-8ad6-aa7f38c803fb/
+
+  # Workshop Studio overrides both of these with its per-event regional bucket.
+  # The defaults are the public workshop assets bucket, which is in us-west-2 --
+  # the only deployable region, and a hard requirement because these values are
+  # used as Code.S3Bucket for Lambda layers, which must be same-region. Keeping
+  # defaults here is what makes a self-paced deployment possible.
+  AssetsBucketName:
+    Type: String
+    Default: ws-assets-prod-iad-r-pdx-f3b3f9f1a7d6a3d0
+    Description: >
+      S3 bucket holding prereq.sh and the psycopg Lambda layer zips. Must be in
+      the same region as the stack. Workshop Studio supplies this automatically.
+
+  AssetsBucketPrefix:
+    Type: String
+    Default: 31d6eec7-687f-495c-8ad6-aa7f38c803fb/
+    Description: >
+      Key prefix within AssetsBucketName, including the trailing slash.
+      Workshop Studio supplies this automatically.
+
+  DBVersion:
+    Type: String
+    Default: "18"
+    Description: Default version of the Aurora PostgreSQL pgvector
+
+  CreateIDC:
+    Type: String
+    Default: "yes"
+    AllowedValues:
+      - "no"
+      - "yes"
+    Description: Whether this stack should create AWS IAM Identity Center instance and setup users/groups. Answer "Yes" only if the AWS account does not have IDC enabled and is allow listed to enable the same.
+
+  # Code Editor Parameters
+  CodeEditorInstanceType:
+    Description: Code Editor EC2 instance type
+    Type: String
+    Default: t4g.medium
+
+  CodeEditorVolumeSize:
+    Description: Code Editor EC2 instance volume size in GB
+    Type: Number
+    Default: 40
+
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://${PublicAssetsBucketName}.s3.amazonaws.com/${PublicAssetsBucketPrefix}genai-pgvector-labs-vpc.yml"
+      Parameters:
+        TemplateName: !Ref TemplateName
+        VpcName: !Ref VpcName
+        VpcCIDR: !Ref VpcCIDR
+        PublicSubnetACidr: !Ref PublicSubnetACidr
+        PublicSubnetBCidr: !Ref PublicSubnetBCidr
+        PublicSubnetCCidr: !Ref PublicSubnetCCidr
+        PrivateSubnetACidr: !Ref PrivateSubnetACidr
+        PrivateSubnetBCidr: !Ref PrivateSubnetBCidr
+        PrivateSubnetCCidr: !Ref PrivateSubnetCCidr
+
+  RDSVersionStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://${PublicAssetsBucketName}.s3.amazonaws.com/${PublicAssetsBucketPrefix}genai-pgvector-labs-rdsversion-lambda.yml"
+
+  APGStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: VPCStack
+    Properties:
+      TemplateURL: !Sub "https://${PublicAssetsBucketName}.s3.amazonaws.com/${PublicAssetsBucketPrefix}genai-pgvector-labs-apg.yml"
+      Parameters:
+        TemplateName: !Ref TemplateName
+        VpcCIDR: !Ref VpcCIDR
+        VPC: !GetAtt VPCStack.Outputs.VPC
+        PrivateSubnets: !GetAtt VPCStack.Outputs.PrivateSubnets
+        DBVersion: !Ref DBVersion
+        RDSVersionLambdaFunction: !GetAtt RDSVersionStack.Outputs.RDSVersionLambdaFunction
+
+  # Code Editor Stack integrated with the workshop VPC
+  # This version requires the code-editor-workshop-vpc.yaml template
+  CodeEditorStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - VPCStack
+      - APGStack
+    Properties:
+      TemplateURL: !Sub "https://${PublicAssetsBucketName}.s3.amazonaws.com/${PublicAssetsBucketPrefix}code-editor-workshop-vpc.yaml"
+      Parameters:
+        CodeEditorUser: participant
+        InstanceName: !Sub "${TemplateName}-CodeEditor"
+        InstanceVolumeSize: !Ref CodeEditorVolumeSize
+        InstanceType: !Ref CodeEditorInstanceType
+        InstanceOperatingSystem: AmazonLinux-2023
+        HomeFolder: /workshop
+        DevServerBasePath: app
+        DevServerPort: 8081
+        RepoUrl: !Ref DefaultCodeRepository
+        VPCId: !GetAtt VPCStack.Outputs.VPC
+        SubnetId: !GetAtt VPCStack.Outputs.PublicSubnetA
+        VpcCIDR: !Ref VpcCIDR
+        AssetZipS3Path: ""
+        BranchZipS3Path: ""
+        FolderZipS3Path: ""
+        DBSecretArn: !GetAtt APGStack.Outputs.RDSSecrets
+        AssetsBucketName: !Ref AssetsBucketName
+        AssetsBucketPrefix: !Ref AssetsBucketPrefix
+
+  NotebookStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: VPCStack
+    Properties:
+      TemplateURL: !Sub "https://${PublicAssetsBucketName}.s3.amazonaws.com/${PublicAssetsBucketPrefix}genai-pgvector-labs-notebook.yml"
+      Parameters:
+        VpcCIDR: !Ref VpcCIDR
+        VPC: !GetAtt VPCStack.Outputs.VPC
+        PublicSubnetA: !GetAtt VPCStack.Outputs.PublicSubnetA
+        DefaultCodeRepository: !Ref DefaultCodeRepository
+
+  IDRStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - APGStack
+      - RDSVersionStack
+    Properties:
+      TemplateURL: !Sub "https://${PublicAssetsBucketName}.s3.amazonaws.com/${PublicAssetsBucketPrefix}genai-pgvector-labs-idr.yml"
+      Parameters:
+        TemplateName: !Ref TemplateName
+        VpcCIDR: !Ref VpcCIDR
+        VPC: !GetAtt VPCStack.Outputs.VPC
+        PrivateSubnets: !GetAtt VPCStack.Outputs.PrivateSubnets
+        DBVersion: !Ref DBVersion
+        AssetsBucketName: !Ref AssetsBucketName
+        AssetsBucketPrefix: !Ref AssetsBucketPrefix
+        RDSSecrets: !GetAtt APGStack.Outputs.RDSSecrets
+        PrivateRouteTable: !GetAtt VPCStack.Outputs.PrivateRouteTable
+        APGCluster: !GetAtt APGStack.Outputs.APGCluster
+        RDSVersionLambdaFunction: !GetAtt RDSVersionStack.Outputs.RDSVersionLambdaFunction
+
+  QBusinessStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://${PublicAssetsBucketName}.s3.amazonaws.com/${PublicAssetsBucketPrefix}qbusiness_infra.yml"
+      Parameters:
+        CreateIDC: "yes"
+
+  ProductSearchStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - APGStack
+      - VPCStack
+    Properties:
+      TemplateURL: !Sub "https://${PublicAssetsBucketName}.s3.amazonaws.com/${PublicAssetsBucketPrefix}genai-product-catalog-search.yml"
+      Parameters:
+        TemplateName: "genai-product-search"
+        AssetsBucketName: !Ref AssetsBucketName
+        AssetsBucketPrefix: !Ref AssetsBucketPrefix
+        RDSSecrets: !GetAtt APGStack.Outputs.RDSSecrets
+        VPC: !GetAtt VPCStack.Outputs.VPC
+        PrivateSubnets: !GetAtt VPCStack.Outputs.PrivateSubnets
+        PrivateRouteTable: !GetAtt VPCStack.Outputs.PrivateRouteTable
+        DBCluster: !GetAtt APGStack.Outputs.APGCluster
+        APGClusterEP: !GetAtt APGStack.Outputs.APGClusterEP
+
+  TextSummarizationStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - APGStack
+      - VPCStack
+    Properties:
+      TemplateURL: !Sub "https://${PublicAssetsBucketName}.s3.amazonaws.com/${PublicAssetsBucketPrefix}genai-text-summarization-data.yml"
+      Parameters:
+        TemplateName: !Sub "${TemplateName}-text-sum"
+        AssetsBucketName: !Ref AssetsBucketName
+        AssetsBucketPrefix: !Ref AssetsBucketPrefix
+        RDSSecrets: !GetAtt APGStack.Outputs.RDSSecrets
+        VPC: !GetAtt VPCStack.Outputs.VPC
+        PrivateSubnets: !GetAtt VPCStack.Outputs.PrivateSubnets
+        DBCluster: !GetAtt APGStack.Outputs.APGCluster
+        APGClusterEP: !GetAtt APGStack.Outputs.APGClusterEP
+
+Outputs:
+  # Code Editor Outputs for Participants
+  CodeEditorURL:
+    Description: Code Editor IDE URL - Full URL to access VS Code in browser
+    Value: !GetAtt CodeEditorStack.Outputs.URL
+    Export:
+      Name: !Sub "CodeEditorURL"
+
+  CodeEditorUsername:
+    Description: Code Editor Username - Use this to login to VS Code
+    Value: !GetAtt CodeEditorStack.Outputs.Username
+    Export:
+      Name: !Sub "CodeEditorUsername"
+
+  CodeEditorPassword:
+    Description: Code Editor Password - Use this to login to VS Code
+    Value: !GetAtt CodeEditorStack.Outputs.Password
+    Export:
+      Name: !Sub "CodeEditorPassword"
+
+  # Database Outputs
+  APGClusterEndpoint:
+    Description: Aurora PostgreSQL Cluster Endpoint - Use this to connect to the database
+    Value: !GetAtt APGStack.Outputs.APGClusterEP
+    Export:
+      Name: !Sub "APGClusterEP"
+
+  DatabaseSecretName:
+    Description: Secrets Manager Secret Name containing database credentials
+    Value: apgpg-pgvector-secret
+    Export:
+      Name: !Sub "DBSecretName"
+
+  # Notebook Output
+  SageMakerNotebookInstance:
+    Description: SageMaker Notebook Instance Name
+    Value: !GetAtt NotebookStack.Outputs.NotebookInstance
+    Export:
+      Name: !Sub "NotebookInstance"
+
+  # Bedrock Outputs
+  BedrockKnowledgeBaseID:
+    Description: Bedrock Knowledge Base ID for product search
+    Value: !GetAtt ProductSearchStack.Outputs.BedrockKnowledgeBaseId
+    Export:
+      Name: !Sub "BedrockKnowledgeBase"
+
+  BedrockAgentID:
+    Description: Bedrock Agent ID for product search
+    Value: !GetAtt ProductSearchStack.Outputs.BedrockAgentId
+    Export:
+      Name: !Sub "BedrockAgentId"
+
+  # S3 Buckets for Knowledge Bases
+  IDRKnowledgeBaseBucket:
+    Description: S3 bucket for IDR Knowledge Base
+    Value: !GetAtt IDRStack.Outputs.KBIDRS3SourceBucketName
+    Export:
+      Name: !Sub "KBIDR"
+
+  QAKnowledgeBaseBucket:
+    Description: S3 bucket for QA Knowledge Base
+    Value: !GetAtt IDRStack.Outputs.KBQAS3SourceBucketName
+    Export:
+      Name: !Sub "KBQA"
+
+  # Text Summarization Lab Data
+  TextSummarizationDataStatus:
+    Description: Text Summarization sample data setup status
+    Value: !GetAtt TextSummarizationStack.Outputs.TextSummarizationBootstrapStatus
+    Export:
+      Name: !Sub "${AWS::Region}-${AWS::StackName}-TextSummarizationDataStatus"
+
+  SupportCasesLoaded:
+    Description: Number of customer support cases loaded for text summarization lab
+    Value: !GetAtt TextSummarizationStack.Outputs.SupportCasesCount
+    Export:
+      Name: !Sub "${AWS::Region}-${AWS::StackName}-SupportCasesLoaded"
+
+  # Helper Information
+  Region:
+    Description: AWS Region where resources are deployed
+    Value: !Ref AWS::Region
+
+  AccountID:
+    Description: AWS Account ID
+    Value: !Ref AWS::AccountId

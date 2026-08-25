@@ -49,6 +49,64 @@ jobs:
           print(f"All notebooks valid.")
           EOF
 
+      - name: Compile notebook code cells
+        run: |
+          python - <<'EOF'
+          import ast, pathlib, sys
+          import nbformat
+
+          # Cell magics whose body IS Python -- the magic only wraps or measures it, so
+          # the body must still be compiled. Anything else (%%bash, %%sql, %%html,
+          # %%writefile, ...) has a genuinely non-Python body and is skipped wholesale.
+          PYTHON_CELL_MAGICS = ("%%time", "%%timeit", "%%capture", "%%prun")
+
+          errors = []
+          for nb_path in sorted(pathlib.Path(".").rglob("*.ipynb")):
+              nb = nbformat.read(nb_path.open(), as_version=4)
+              for i, cell in enumerate(nb.cells):
+                  if cell.cell_type != "code":
+                      continue
+                  lines = "".join(cell.source).splitlines()
+                  first = next((l for l in lines if l.strip()), "").lstrip()
+                  if first.startswith("%%") and first.split()[0] not in PYTHON_CELL_MAGICS:
+                      continue
+                  # Blank the magic / shell-escape lines, keeping line numbers aligned so a
+                  # reported line number still points at the real offending line.
+                  # Known limits of this line-prefix heuristic, neither present in this repo
+                  # today: an inline line-magic such as `%time result = compute(` has its
+                  # whole line blanked, so a syntax error on that line is not seen; and a
+                  # shell-capture assignment such as `files = !ls -la` does not start with %
+                  # or !, so it is parsed as-is and would report a spurious error.
+                  src = "\n".join(
+                      "" if l.lstrip().startswith(("%", "!")) else l
+                      for l in lines
+                  )
+                  try:
+                      ast.parse(src)
+                  except SyntaxError as e:
+                      errors.append(f"{nb_path} cell {i}: {type(e).__name__}: {e.msg} (line {e.lineno})")
+          if errors:
+              print("Notebook code cells failed to compile:")
+              for err in errors:
+                  print(" ", err)
+              sys.exit(1)
+          print("All notebook code cells compile.")
+          EOF
+
+      - name: Check for banned dependencies
+        run: |
+          # pandarallel ships sdist-only and is unmaintained since Oct 2023, so
+          # pip must build it at install time -- the reported install failure.
+          # setuptools==65.5.0 was pinned only to make that build work.
+          status=0
+          for token in pandarallel 'setuptools==65.5.0'; do
+            if grep -rIn --include='*.ipynb' --include='requirements*.txt' -e "$token" .; then
+              echo "ERROR: '$token' was reintroduced (see matches above)"
+              status=1
+            fi
+          done
+          exit $status
+
   # NOTE: 06-incident-detection/strands-agent/requirements.txt is intentionally
   # excluded from the matrix below — strands-agents pulls a large dependency
   # tree that makes dry-run resolution slow; its .py files are covered by the
