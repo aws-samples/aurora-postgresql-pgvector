@@ -1,5 +1,9 @@
 # Generative AI Use Cases with pgvector, Aurora PostgreSQL, and Amazon Bedrock
 
+This repository contains the hands-on labs for the **[Generative AI with pgvector and Aurora PostgreSQL Workshop](https://catalog.workshops.aws/pgvector/en-US)**. The labs build from vector-search fundamentals into retrieval augmented generation, in-database ML inference, semantic caching, and agentic operational patterns.
+
+Use the hosted Workshop Studio experience when you want the fastest path through the labs. Use the self-paced path when you want to inspect the implementation, adapt the code, or run individual modules in your own AWS account. The labs run on Aurora PostgreSQL 18.3 with the `vector` extension; for the pgvector versions available on each Aurora PostgreSQL engine, see [Extension versions for Amazon Aurora PostgreSQL](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Extensions.html).
+
 <div align="center">
 
 [![Python](https://img.shields.io/badge/Python-3.13%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
@@ -13,10 +17,6 @@
 ![Status](https://img.shields.io/badge/Status-Educational-blue?style=for-the-badge)
 
 </div>
-
-This repository contains the hands-on labs for the **[Generative AI with pgvector and Aurora PostgreSQL Workshop](https://catalog.workshops.aws/pgvector/en-US)**. The labs build from vector-search fundamentals into retrieval augmented generation, in-database ML inference, semantic caching, and agentic operational patterns.
-
-Use the hosted Workshop Studio experience when you want the fastest path through the labs. Use the self-paced path when you want to inspect the implementation, adapt the code, or run individual modules in your own AWS account.
 
 ## What You Will Build
 
